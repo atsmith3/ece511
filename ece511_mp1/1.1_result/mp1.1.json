@@ -5,54 +5,6 @@
         "kernel": "", 
         "mmap_using_noreserve": false, 
         "kernel_addr_check": true, 
-        "membus": {
-            "point_of_coherency": true, 
-            "system": "system", 
-            "response_latency": 2, 
-            "cxx_class": "CoherentXBar", 
-            "forward_latency": 4, 
-            "clk_domain": "system.clk_domain", 
-            "point_of_unification": true, 
-            "width": 16, 
-            "eventq_index": 0, 
-            "default_p_state": "UNDEFINED", 
-            "p_state_clk_gate_max": 1000000000000, 
-            "master": {
-                "peer": [
-                    "system.mem_ctrls.port"
-                ], 
-                "role": "MASTER"
-            }, 
-            "type": "CoherentXBar", 
-            "frontend_latency": 3, 
-            "slave": {
-                "peer": [
-                    "system.system_port", 
-                    "system.cpu.icache_port", 
-                    "system.cpu.dcache_port", 
-                    "system.cpu.itb.walker.port", 
-                    "system.cpu.dtb.walker.port"
-                ], 
-                "role": "SLAVE"
-            }, 
-            "p_state_clk_gate_min": 1000, 
-            "snoop_filter": {
-                "name": "snoop_filter", 
-                "system": "system", 
-                "max_capacity": 8388608, 
-                "eventq_index": 0, 
-                "cxx_class": "SnoopFilter", 
-                "path": "system.membus.snoop_filter", 
-                "type": "SnoopFilter", 
-                "lookup_latency": 1
-            }, 
-            "power_model": [], 
-            "path": "system.membus", 
-            "snoop_response_latency": 4, 
-            "name": "membus", 
-            "p_state_clk_gate_bins": 20, 
-            "use_default_range": false
-        }, 
         "symbolfile": "", 
         "readfile": "", 
         "thermal_model": null, 
@@ -110,8 +62,35 @@
         "cache_line_size": 64, 
         "boot_osflags": "a", 
         "system_port": {
-            "peer": "system.membus.slave[0]", 
+            "peer": "system.sys_port_proxy.slave[0]", 
             "role": "MASTER"
+        }, 
+        "sys_port_proxy": {
+            "system": "system", 
+            "support_inst_reqs": true, 
+            "slave": {
+                "peer": [
+                    "system.system_port"
+                ], 
+                "role": "SLAVE"
+            }, 
+            "name": "sys_port_proxy", 
+            "p_state_clk_gate_min": 1000, 
+            "no_retry_on_stall": false, 
+            "p_state_clk_gate_bins": 20, 
+            "support_data_reqs": true, 
+            "cxx_class": "RubyPortProxy", 
+            "clk_domain": "system.clk_domain", 
+            "power_model": [], 
+            "is_cpu_sequencer": true, 
+            "version": 0, 
+            "eventq_index": 0, 
+            "using_ruby_tester": false, 
+            "default_p_state": "UNDEFINED", 
+            "p_state_clk_gate_max": 1000000000000, 
+            "path": "system.sys_port_proxy", 
+            "type": "RubyPortProxy", 
+            "ruby_system": "system.ruby"
         }, 
         "power_model": [], 
         "work_cpus_ckpt_count": 0, 
@@ -131,7 +110,2289 @@
             "domain_id": -1
         }, 
         "work_end_ckpt_count": 0, 
-        "mem_mode": "atomic", 
+        "mem_mode": "timing", 
+        "ruby": {
+            "all_instructions": false, 
+            "memory_size_bits": 48, 
+            "cxx_class": "RubySystem", 
+            "l1_cntrl0": {
+                "responseToL1Cache": {
+                    "ordered": false, 
+                    "name": "responseToL1Cache", 
+                    "cxx_class": "MessageBuffer", 
+                    "slave": {
+                        "peer": "system.ruby.network.master[1]", 
+                        "role": "SLAVE"
+                    }, 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.l1_cntrl0.responseToL1Cache", 
+                    "type": "MessageBuffer"
+                }, 
+                "use_timeout_latency": 50, 
+                "system": "system", 
+                "l2_select_num_bits": 1, 
+                "cluster_id": 0, 
+                "sequencer": {
+                    "no_retry_on_stall": false, 
+                    "deadlock_threshold": 500000, 
+                    "using_ruby_tester": false, 
+                    "system": "system", 
+                    "dcache": "system.ruby.l1_cntrl0.L1Dcache", 
+                    "cxx_class": "Sequencer", 
+                    "garnet_standalone": false, 
+                    "clk_domain": "system.cpu_clk_domain", 
+                    "icache_hit_latency": 1, 
+                    "version": 0, 
+                    "eventq_index": 0, 
+                    "default_p_state": "UNDEFINED", 
+                    "p_state_clk_gate_max": 1000000000000, 
+                    "type": "RubySequencer", 
+                    "icache": "system.ruby.l1_cntrl0.L1Icache", 
+                    "slave": {
+                        "peer": [
+                            "system.cpu.icache_port", 
+                            "system.cpu.dcache_port"
+                        ], 
+                        "role": "SLAVE"
+                    }, 
+                    "p_state_clk_gate_min": 1000, 
+                    "power_model": [], 
+                    "coreid": 99, 
+                    "path": "system.ruby.l1_cntrl0.sequencer", 
+                    "ruby_system": "system.ruby", 
+                    "support_inst_reqs": true, 
+                    "name": "sequencer", 
+                    "max_outstanding_requests": 16, 
+                    "p_state_clk_gate_bins": 20, 
+                    "dcache_hit_latency": 1, 
+                    "support_data_reqs": true, 
+                    "is_cpu_sequencer": true
+                }, 
+                "cxx_class": "L1Cache_Controller", 
+                "type": "L1Cache_Controller", 
+                "recycle_latency": 10, 
+                "clk_domain": "system.cpu_clk_domain", 
+                "version": 0, 
+                "eventq_index": 0, 
+                "default_p_state": "UNDEFINED", 
+                "p_state_clk_gate_max": 1000000000000, 
+                "responseFromL1Cache": {
+                    "ordered": false, 
+                    "name": "responseFromL1Cache", 
+                    "cxx_class": "MessageBuffer", 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "master": {
+                        "peer": "system.ruby.network.slave[1]", 
+                        "role": "MASTER"
+                    }, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.l1_cntrl0.responseFromL1Cache", 
+                    "type": "MessageBuffer"
+                }, 
+                "number_of_TBEs": 256, 
+                "transitions_per_cycle": 4, 
+                "p_state_clk_gate_min": 1000, 
+                "requestFromL1Cache": {
+                    "ordered": false, 
+                    "name": "requestFromL1Cache", 
+                    "cxx_class": "MessageBuffer", 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "master": {
+                        "peer": "system.ruby.network.slave[0]", 
+                        "role": "MASTER"
+                    }, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.l1_cntrl0.requestFromL1Cache", 
+                    "type": "MessageBuffer"
+                }, 
+                "triggerQueue": {
+                    "ordered": true, 
+                    "name": "triggerQueue", 
+                    "cxx_class": "MessageBuffer", 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.l1_cntrl0.triggerQueue", 
+                    "type": "MessageBuffer"
+                }, 
+                "power_model": [], 
+                "addr_ranges": [
+                    "0:18446744073709551615:0:0:0:0"
+                ], 
+                "L1Icache": {
+                    "size": 65536, 
+                    "resourceStalls": false, 
+                    "is_icache": true, 
+                    "name": "L1Icache", 
+                    "eventq_index": 0, 
+                    "dataAccessLatency": 1, 
+                    "tagArrayBanks": 1, 
+                    "tagAccessLatency": 1, 
+                    "replacement_policy": {
+                        "name": "replacement_policy", 
+                        "eventq_index": 0, 
+                        "assoc": 8, 
+                        "cxx_class": "PseudoLRUPolicy", 
+                        "path": "system.ruby.l1_cntrl0.L1Icache.replacement_policy", 
+                        "block_size": 64, 
+                        "type": "PseudoLRUReplacementPolicy", 
+                        "size": 65536
+                    }, 
+                    "assoc": 8, 
+                    "start_index_bit": 6, 
+                    "cxx_class": "CacheMemory", 
+                    "path": "system.ruby.l1_cntrl0.L1Icache", 
+                    "block_size": 0, 
+                    "type": "RubyCache", 
+                    "dataArrayBanks": 1, 
+                    "ruby_system": "system.ruby"
+                }, 
+                "buffer_size": 0, 
+                "send_evictions": true, 
+                "ruby_system": "system.ruby", 
+                "L1Dcache": {
+                    "size": 65536, 
+                    "resourceStalls": false, 
+                    "is_icache": false, 
+                    "name": "L1Dcache", 
+                    "eventq_index": 0, 
+                    "dataAccessLatency": 1, 
+                    "tagArrayBanks": 1, 
+                    "tagAccessLatency": 1, 
+                    "replacement_policy": {
+                        "name": "replacement_policy", 
+                        "eventq_index": 0, 
+                        "assoc": 8, 
+                        "cxx_class": "PseudoLRUPolicy", 
+                        "path": "system.ruby.l1_cntrl0.L1Dcache.replacement_policy", 
+                        "block_size": 64, 
+                        "type": "PseudoLRUReplacementPolicy", 
+                        "size": 65536
+                    }, 
+                    "assoc": 8, 
+                    "start_index_bit": 6, 
+                    "cxx_class": "CacheMemory", 
+                    "path": "system.ruby.l1_cntrl0.L1Dcache", 
+                    "block_size": 0, 
+                    "type": "RubyCache", 
+                    "dataArrayBanks": 1, 
+                    "ruby_system": "system.ruby"
+                }, 
+                "name": "l1_cntrl0", 
+                "p_state_clk_gate_bins": 20, 
+                "requestToL1Cache": {
+                    "ordered": false, 
+                    "name": "requestToL1Cache", 
+                    "cxx_class": "MessageBuffer", 
+                    "slave": {
+                        "peer": "system.ruby.network.master[0]", 
+                        "role": "SLAVE"
+                    }, 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.l1_cntrl0.requestToL1Cache", 
+                    "type": "MessageBuffer"
+                }, 
+                "request_latency": 2, 
+                "mandatoryQueue": {
+                    "ordered": false, 
+                    "name": "mandatoryQueue", 
+                    "cxx_class": "MessageBuffer", 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.l1_cntrl0.mandatoryQueue", 
+                    "type": "MessageBuffer"
+                }, 
+                "path": "system.ruby.l1_cntrl0"
+            }, 
+            "network": {
+                "int_link_buffers": [
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers00", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers00", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers01", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers01", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers02", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers02", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers03", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers03", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers04", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers04", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers05", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers05", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers06", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers06", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers07", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers07", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers08", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers08", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers09", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers09", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers10", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers10", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers11", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers11", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers12", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers12", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers13", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers13", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers14", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers14", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers15", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers15", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers16", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers16", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers17", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers17", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers18", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers18", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers19", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers19", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers20", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers20", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers21", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers21", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers22", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers22", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers23", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers23", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers24", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers24", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers25", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers25", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers26", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers26", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers27", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers27", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers28", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers28", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers29", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers29", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers30", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers30", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers31", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers31", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers32", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers32", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers33", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers33", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers34", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers34", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers35", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers35", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers36", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers36", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers37", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers37", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers38", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers38", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers39", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers39", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers40", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers40", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers41", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers41", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers42", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers42", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers43", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers43", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers44", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers44", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers45", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers45", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers46", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers46", 
+                        "type": "MessageBuffer"
+                    }, 
+                    {
+                        "ordered": true, 
+                        "name": "int_link_buffers47", 
+                        "cxx_class": "MessageBuffer", 
+                        "randomization": false, 
+                        "eventq_index": 0, 
+                        "buffer_size": 0, 
+                        "path": "system.ruby.network.int_link_buffers47", 
+                        "type": "MessageBuffer"
+                    }
+                ], 
+                "cxx_class": "SimpleNetwork", 
+                "clk_domain": "system.ruby.clk_domain", 
+                "adaptive_routing": false, 
+                "eventq_index": 0, 
+                "default_p_state": "UNDEFINED", 
+                "p_state_clk_gate_max": 1000000000000, 
+                "master": {
+                    "peer": [
+                        "system.ruby.l1_cntrl0.requestToL1Cache.slave", 
+                        "system.ruby.l1_cntrl0.responseToL1Cache.slave", 
+                        "system.ruby.l2_cntrl0.GlobalRequestToL2Cache.slave", 
+                        "system.ruby.l2_cntrl0.L1RequestToL2Cache.slave", 
+                        "system.ruby.l2_cntrl0.responseToL2Cache.slave", 
+                        "system.ruby.l2_cntrl1.GlobalRequestToL2Cache.slave", 
+                        "system.ruby.l2_cntrl1.L1RequestToL2Cache.slave", 
+                        "system.ruby.l2_cntrl1.responseToL2Cache.slave", 
+                        "system.ruby.dir_cntrl0.requestToDir.slave", 
+                        "system.ruby.dir_cntrl0.responseToDir.slave"
+                    ], 
+                    "role": "MASTER"
+                }, 
+                "topology": "Crossbar", 
+                "type": "SimpleNetwork", 
+                "slave": {
+                    "peer": [
+                        "system.ruby.l1_cntrl0.requestFromL1Cache.master", 
+                        "system.ruby.l1_cntrl0.responseFromL1Cache.master", 
+                        "system.ruby.l2_cntrl0.GlobalRequestFromL2Cache.master", 
+                        "system.ruby.l2_cntrl0.L1RequestFromL2Cache.master", 
+                        "system.ruby.l2_cntrl0.responseFromL2Cache.master", 
+                        "system.ruby.l2_cntrl1.GlobalRequestFromL2Cache.master", 
+                        "system.ruby.l2_cntrl1.L1RequestFromL2Cache.master", 
+                        "system.ruby.l2_cntrl1.responseFromL2Cache.master", 
+                        "system.ruby.dir_cntrl0.responseFromDir.master", 
+                        "system.ruby.dir_cntrl0.forwardFromDir.master"
+                    ], 
+                    "role": "SLAVE"
+                }, 
+                "p_state_clk_gate_min": 1000, 
+                "int_links": [
+                    {
+                        "latency": 1, 
+                        "name": "int_links0", 
+                        "weight": 1, 
+                        "src_node": "system.ruby.network.routers0", 
+                        "dst_inport": "", 
+                        "link_id": 4, 
+                        "dst_node": "system.ruby.network.routers4", 
+                        "eventq_index": 0, 
+                        "src_outport": "", 
+                        "cxx_class": "SimpleIntLink", 
+                        "path": "system.ruby.network.int_links0", 
+                        "type": "SimpleIntLink", 
+                        "bandwidth_factor": 16
+                    }, 
+                    {
+                        "latency": 1, 
+                        "name": "int_links1", 
+                        "weight": 1, 
+                        "src_node": "system.ruby.network.routers1", 
+                        "dst_inport": "", 
+                        "link_id": 5, 
+                        "dst_node": "system.ruby.network.routers4", 
+                        "eventq_index": 0, 
+                        "src_outport": "", 
+                        "cxx_class": "SimpleIntLink", 
+                        "path": "system.ruby.network.int_links1", 
+                        "type": "SimpleIntLink", 
+                        "bandwidth_factor": 16
+                    }, 
+                    {
+                        "latency": 1, 
+                        "name": "int_links2", 
+                        "weight": 1, 
+                        "src_node": "system.ruby.network.routers2", 
+                        "dst_inport": "", 
+                        "link_id": 6, 
+                        "dst_node": "system.ruby.network.routers4", 
+                        "eventq_index": 0, 
+                        "src_outport": "", 
+                        "cxx_class": "SimpleIntLink", 
+                        "path": "system.ruby.network.int_links2", 
+                        "type": "SimpleIntLink", 
+                        "bandwidth_factor": 16
+                    }, 
+                    {
+                        "latency": 1, 
+                        "name": "int_links3", 
+                        "weight": 1, 
+                        "src_node": "system.ruby.network.routers3", 
+                        "dst_inport": "", 
+                        "link_id": 7, 
+                        "dst_node": "system.ruby.network.routers4", 
+                        "eventq_index": 0, 
+                        "src_outport": "", 
+                        "cxx_class": "SimpleIntLink", 
+                        "path": "system.ruby.network.int_links3", 
+                        "type": "SimpleIntLink", 
+                        "bandwidth_factor": 16
+                    }, 
+                    {
+                        "latency": 1, 
+                        "name": "int_links4", 
+                        "weight": 1, 
+                        "src_node": "system.ruby.network.routers4", 
+                        "dst_inport": "", 
+                        "link_id": 8, 
+                        "dst_node": "system.ruby.network.routers0", 
+                        "eventq_index": 0, 
+                        "src_outport": "", 
+                        "cxx_class": "SimpleIntLink", 
+                        "path": "system.ruby.network.int_links4", 
+                        "type": "SimpleIntLink", 
+                        "bandwidth_factor": 16
+                    }, 
+                    {
+                        "latency": 1, 
+                        "name": "int_links5", 
+                        "weight": 1, 
+                        "src_node": "system.ruby.network.routers4", 
+                        "dst_inport": "", 
+                        "link_id": 9, 
+                        "dst_node": "system.ruby.network.routers1", 
+                        "eventq_index": 0, 
+                        "src_outport": "", 
+                        "cxx_class": "SimpleIntLink", 
+                        "path": "system.ruby.network.int_links5", 
+                        "type": "SimpleIntLink", 
+                        "bandwidth_factor": 16
+                    }, 
+                    {
+                        "latency": 1, 
+                        "name": "int_links6", 
+                        "weight": 1, 
+                        "src_node": "system.ruby.network.routers4", 
+                        "dst_inport": "", 
+                        "link_id": 10, 
+                        "dst_node": "system.ruby.network.routers2", 
+                        "eventq_index": 0, 
+                        "src_outport": "", 
+                        "cxx_class": "SimpleIntLink", 
+                        "path": "system.ruby.network.int_links6", 
+                        "type": "SimpleIntLink", 
+                        "bandwidth_factor": 16
+                    }, 
+                    {
+                        "latency": 1, 
+                        "name": "int_links7", 
+                        "weight": 1, 
+                        "src_node": "system.ruby.network.routers4", 
+                        "dst_inport": "", 
+                        "link_id": 11, 
+                        "dst_node": "system.ruby.network.routers3", 
+                        "eventq_index": 0, 
+                        "src_outport": "", 
+                        "cxx_class": "SimpleIntLink", 
+                        "path": "system.ruby.network.int_links7", 
+                        "type": "SimpleIntLink", 
+                        "bandwidth_factor": 16
+                    }
+                ], 
+                "routers": [
+                    {
+                        "router_id": 0, 
+                        "latency": 1, 
+                        "name": "routers0", 
+                        "p_state_clk_gate_min": 1000, 
+                        "virt_nets": 3, 
+                        "p_state_clk_gate_bins": 20, 
+                        "cxx_class": "Switch", 
+                        "clk_domain": "system.ruby.clk_domain", 
+                        "power_model": [], 
+                        "eventq_index": 0, 
+                        "default_p_state": "UNDEFINED", 
+                        "p_state_clk_gate_max": 1000000000000, 
+                        "path": "system.ruby.network.routers0", 
+                        "type": "Switch", 
+                        "port_buffers": [
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers00", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers0.port_buffers00", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers01", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers0.port_buffers01", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers02", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers0.port_buffers02", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers03", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers0.port_buffers03", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers04", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers0.port_buffers04", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers05", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers0.port_buffers05", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers06", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers0.port_buffers06", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers07", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers0.port_buffers07", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers08", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers0.port_buffers08", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers09", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers0.port_buffers09", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers10", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers0.port_buffers10", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers11", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers0.port_buffers11", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers12", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers0.port_buffers12", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers13", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers0.port_buffers13", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers14", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers0.port_buffers14", 
+                                "type": "MessageBuffer"
+                            }
+                        ]
+                    }, 
+                    {
+                        "router_id": 1, 
+                        "latency": 1, 
+                        "name": "routers1", 
+                        "p_state_clk_gate_min": 1000, 
+                        "virt_nets": 3, 
+                        "p_state_clk_gate_bins": 20, 
+                        "cxx_class": "Switch", 
+                        "clk_domain": "system.ruby.clk_domain", 
+                        "power_model": [], 
+                        "eventq_index": 0, 
+                        "default_p_state": "UNDEFINED", 
+                        "p_state_clk_gate_max": 1000000000000, 
+                        "path": "system.ruby.network.routers1", 
+                        "type": "Switch", 
+                        "port_buffers": [
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers00", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers1.port_buffers00", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers01", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers1.port_buffers01", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers02", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers1.port_buffers02", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers03", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers1.port_buffers03", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers04", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers1.port_buffers04", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers05", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers1.port_buffers05", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers06", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers1.port_buffers06", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers07", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers1.port_buffers07", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers08", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers1.port_buffers08", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers09", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers1.port_buffers09", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers10", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers1.port_buffers10", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers11", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers1.port_buffers11", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers12", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers1.port_buffers12", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers13", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers1.port_buffers13", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers14", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers1.port_buffers14", 
+                                "type": "MessageBuffer"
+                            }
+                        ]
+                    }, 
+                    {
+                        "router_id": 2, 
+                        "latency": 1, 
+                        "name": "routers2", 
+                        "p_state_clk_gate_min": 1000, 
+                        "virt_nets": 3, 
+                        "p_state_clk_gate_bins": 20, 
+                        "cxx_class": "Switch", 
+                        "clk_domain": "system.ruby.clk_domain", 
+                        "power_model": [], 
+                        "eventq_index": 0, 
+                        "default_p_state": "UNDEFINED", 
+                        "p_state_clk_gate_max": 1000000000000, 
+                        "path": "system.ruby.network.routers2", 
+                        "type": "Switch", 
+                        "port_buffers": [
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers00", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers2.port_buffers00", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers01", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers2.port_buffers01", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers02", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers2.port_buffers02", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers03", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers2.port_buffers03", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers04", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers2.port_buffers04", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers05", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers2.port_buffers05", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers06", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers2.port_buffers06", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers07", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers2.port_buffers07", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers08", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers2.port_buffers08", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers09", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers2.port_buffers09", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers10", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers2.port_buffers10", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers11", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers2.port_buffers11", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers12", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers2.port_buffers12", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers13", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers2.port_buffers13", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers14", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers2.port_buffers14", 
+                                "type": "MessageBuffer"
+                            }
+                        ]
+                    }, 
+                    {
+                        "router_id": 3, 
+                        "latency": 1, 
+                        "name": "routers3", 
+                        "p_state_clk_gate_min": 1000, 
+                        "virt_nets": 3, 
+                        "p_state_clk_gate_bins": 20, 
+                        "cxx_class": "Switch", 
+                        "clk_domain": "system.ruby.clk_domain", 
+                        "power_model": [], 
+                        "eventq_index": 0, 
+                        "default_p_state": "UNDEFINED", 
+                        "p_state_clk_gate_max": 1000000000000, 
+                        "path": "system.ruby.network.routers3", 
+                        "type": "Switch", 
+                        "port_buffers": [
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers00", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers3.port_buffers00", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers01", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers3.port_buffers01", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers02", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers3.port_buffers02", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers03", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers3.port_buffers03", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers04", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers3.port_buffers04", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers05", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers3.port_buffers05", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers06", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers3.port_buffers06", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers07", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers3.port_buffers07", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers08", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers3.port_buffers08", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers09", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers3.port_buffers09", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers10", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers3.port_buffers10", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers11", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers3.port_buffers11", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers12", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers3.port_buffers12", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers13", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers3.port_buffers13", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers14", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers3.port_buffers14", 
+                                "type": "MessageBuffer"
+                            }
+                        ]
+                    }, 
+                    {
+                        "router_id": 4, 
+                        "latency": 1, 
+                        "name": "routers4", 
+                        "p_state_clk_gate_min": 1000, 
+                        "virt_nets": 3, 
+                        "p_state_clk_gate_bins": 20, 
+                        "cxx_class": "Switch", 
+                        "clk_domain": "system.ruby.clk_domain", 
+                        "power_model": [], 
+                        "eventq_index": 0, 
+                        "default_p_state": "UNDEFINED", 
+                        "p_state_clk_gate_max": 1000000000000, 
+                        "path": "system.ruby.network.routers4", 
+                        "type": "Switch", 
+                        "port_buffers": [
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers00", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers4.port_buffers00", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers01", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers4.port_buffers01", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers02", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers4.port_buffers02", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers03", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers4.port_buffers03", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers04", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers4.port_buffers04", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers05", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers4.port_buffers05", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers06", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers4.port_buffers06", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers07", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers4.port_buffers07", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers08", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers4.port_buffers08", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers09", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers4.port_buffers09", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers10", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers4.port_buffers10", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers11", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers4.port_buffers11", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers12", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers4.port_buffers12", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers13", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers4.port_buffers13", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers14", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers4.port_buffers14", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers15", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers4.port_buffers15", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers16", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers4.port_buffers16", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers17", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers4.port_buffers17", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers18", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers4.port_buffers18", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers19", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers4.port_buffers19", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers20", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers4.port_buffers20", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers21", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers4.port_buffers21", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers22", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers4.port_buffers22", 
+                                "type": "MessageBuffer"
+                            }, 
+                            {
+                                "ordered": true, 
+                                "name": "port_buffers23", 
+                                "cxx_class": "MessageBuffer", 
+                                "randomization": false, 
+                                "eventq_index": 0, 
+                                "buffer_size": 0, 
+                                "path": "system.ruby.network.routers4.port_buffers23", 
+                                "type": "MessageBuffer"
+                            }
+                        ]
+                    }
+                ], 
+                "power_model": [], 
+                "netifs": [], 
+                "control_msg_size": 8, 
+                "buffer_size": 0, 
+                "endpoint_bandwidth": 1000, 
+                "ruby_system": "system.ruby", 
+                "name": "network", 
+                "p_state_clk_gate_bins": 20, 
+                "ext_links": [
+                    {
+                        "latency": 1, 
+                        "name": "ext_links0", 
+                        "weight": 1, 
+                        "ext_node": "system.ruby.l1_cntrl0", 
+                        "link_id": 0, 
+                        "eventq_index": 0, 
+                        "cxx_class": "SimpleExtLink", 
+                        "path": "system.ruby.network.ext_links0", 
+                        "int_node": "system.ruby.network.routers0", 
+                        "type": "SimpleExtLink", 
+                        "bandwidth_factor": 16
+                    }, 
+                    {
+                        "latency": 1, 
+                        "name": "ext_links1", 
+                        "weight": 1, 
+                        "ext_node": "system.ruby.l2_cntrl0", 
+                        "link_id": 1, 
+                        "eventq_index": 0, 
+                        "cxx_class": "SimpleExtLink", 
+                        "path": "system.ruby.network.ext_links1", 
+                        "int_node": "system.ruby.network.routers1", 
+                        "type": "SimpleExtLink", 
+                        "bandwidth_factor": 16
+                    }, 
+                    {
+                        "latency": 1, 
+                        "name": "ext_links2", 
+                        "weight": 1, 
+                        "ext_node": "system.ruby.l2_cntrl1", 
+                        "link_id": 2, 
+                        "eventq_index": 0, 
+                        "cxx_class": "SimpleExtLink", 
+                        "path": "system.ruby.network.ext_links2", 
+                        "int_node": "system.ruby.network.routers2", 
+                        "type": "SimpleExtLink", 
+                        "bandwidth_factor": 16
+                    }, 
+                    {
+                        "latency": 1, 
+                        "name": "ext_links3", 
+                        "weight": 1, 
+                        "ext_node": "system.ruby.dir_cntrl0", 
+                        "link_id": 3, 
+                        "eventq_index": 0, 
+                        "cxx_class": "SimpleExtLink", 
+                        "path": "system.ruby.network.ext_links3", 
+                        "int_node": "system.ruby.network.routers3", 
+                        "type": "SimpleExtLink", 
+                        "bandwidth_factor": 16
+                    }
+                ], 
+                "number_of_virtual_networks": 3, 
+                "path": "system.ruby.network"
+            }, 
+            "l2_cntrl1": {
+                "GlobalRequestFromL2Cache": {
+                    "ordered": false, 
+                    "name": "GlobalRequestFromL2Cache", 
+                    "cxx_class": "MessageBuffer", 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "master": {
+                        "peer": "system.ruby.network.slave[5]", 
+                        "role": "MASTER"
+                    }, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.l2_cntrl1.GlobalRequestFromL2Cache", 
+                    "type": "MessageBuffer"
+                }, 
+                "recycle_latency": 10, 
+                "system": "system", 
+                "cluster_id": 0, 
+                "response_latency": 2, 
+                "cxx_class": "L2Cache_Controller", 
+                "type": "L2Cache_Controller", 
+                "L1RequestToL2Cache": {
+                    "ordered": false, 
+                    "name": "L1RequestToL2Cache", 
+                    "cxx_class": "MessageBuffer", 
+                    "slave": {
+                        "peer": "system.ruby.network.master[6]", 
+                        "role": "SLAVE"
+                    }, 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.l2_cntrl1.L1RequestToL2Cache", 
+                    "type": "MessageBuffer"
+                }, 
+                "clk_domain": "system.ruby.clk_domain", 
+                "version": 1, 
+                "L1RequestFromL2Cache": {
+                    "ordered": false, 
+                    "name": "L1RequestFromL2Cache", 
+                    "cxx_class": "MessageBuffer", 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "master": {
+                        "peer": "system.ruby.network.slave[6]", 
+                        "role": "MASTER"
+                    }, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.l2_cntrl1.L1RequestFromL2Cache", 
+                    "type": "MessageBuffer"
+                }, 
+                "default_p_state": "UNDEFINED", 
+                "p_state_clk_gate_max": 1000000000000, 
+                "eventq_index": 0, 
+                "number_of_TBEs": 256, 
+                "p_state_clk_gate_min": 1000, 
+                "transitions_per_cycle": 4, 
+                "L2cache": {
+                    "size": 262144, 
+                    "resourceStalls": false, 
+                    "is_icache": false, 
+                    "name": "L2cache", 
+                    "eventq_index": 0, 
+                    "dataAccessLatency": 1, 
+                    "tagArrayBanks": 1, 
+                    "tagAccessLatency": 1, 
+                    "replacement_policy": {
+                        "name": "replacement_policy", 
+                        "eventq_index": 0, 
+                        "assoc": 8, 
+                        "cxx_class": "PseudoLRUPolicy", 
+                        "path": "system.ruby.l2_cntrl1.L2cache.replacement_policy", 
+                        "block_size": 64, 
+                        "type": "PseudoLRUReplacementPolicy", 
+                        "size": 262144
+                    }, 
+                    "assoc": 8, 
+                    "start_index_bit": 7, 
+                    "cxx_class": "CacheMemory", 
+                    "path": "system.ruby.l2_cntrl1.L2cache", 
+                    "block_size": 0, 
+                    "type": "RubyCache", 
+                    "dataArrayBanks": 1, 
+                    "ruby_system": "system.ruby"
+                }, 
+                "triggerQueue": {
+                    "ordered": true, 
+                    "name": "triggerQueue", 
+                    "cxx_class": "MessageBuffer", 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.l2_cntrl1.triggerQueue", 
+                    "type": "MessageBuffer"
+                }, 
+                "power_model": [], 
+                "addr_ranges": [
+                    "0:18446744073709551615:0:0:0:0"
+                ], 
+                "GlobalRequestToL2Cache": {
+                    "ordered": false, 
+                    "name": "GlobalRequestToL2Cache", 
+                    "cxx_class": "MessageBuffer", 
+                    "slave": {
+                        "peer": "system.ruby.network.master[5]", 
+                        "role": "SLAVE"
+                    }, 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.l2_cntrl1.GlobalRequestToL2Cache", 
+                    "type": "MessageBuffer"
+                }, 
+                "buffer_size": 0, 
+                "ruby_system": "system.ruby", 
+                "name": "l2_cntrl1", 
+                "p_state_clk_gate_bins": 20, 
+                "responseFromL2Cache": {
+                    "ordered": false, 
+                    "name": "responseFromL2Cache", 
+                    "cxx_class": "MessageBuffer", 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "master": {
+                        "peer": "system.ruby.network.slave[7]", 
+                        "role": "MASTER"
+                    }, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.l2_cntrl1.responseFromL2Cache", 
+                    "type": "MessageBuffer"
+                }, 
+                "request_latency": 2, 
+                "path": "system.ruby.l2_cntrl1", 
+                "responseToL2Cache": {
+                    "ordered": false, 
+                    "name": "responseToL2Cache", 
+                    "cxx_class": "MessageBuffer", 
+                    "slave": {
+                        "peer": "system.ruby.network.master[7]", 
+                        "role": "SLAVE"
+                    }, 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.l2_cntrl1.responseToL2Cache", 
+                    "type": "MessageBuffer"
+                }
+            }, 
+            "l2_cntrl0": {
+                "GlobalRequestFromL2Cache": {
+                    "ordered": false, 
+                    "name": "GlobalRequestFromL2Cache", 
+                    "cxx_class": "MessageBuffer", 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "master": {
+                        "peer": "system.ruby.network.slave[2]", 
+                        "role": "MASTER"
+                    }, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.l2_cntrl0.GlobalRequestFromL2Cache", 
+                    "type": "MessageBuffer"
+                }, 
+                "recycle_latency": 10, 
+                "system": "system", 
+                "cluster_id": 0, 
+                "response_latency": 2, 
+                "cxx_class": "L2Cache_Controller", 
+                "type": "L2Cache_Controller", 
+                "L1RequestToL2Cache": {
+                    "ordered": false, 
+                    "name": "L1RequestToL2Cache", 
+                    "cxx_class": "MessageBuffer", 
+                    "slave": {
+                        "peer": "system.ruby.network.master[3]", 
+                        "role": "SLAVE"
+                    }, 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.l2_cntrl0.L1RequestToL2Cache", 
+                    "type": "MessageBuffer"
+                }, 
+                "clk_domain": "system.ruby.clk_domain", 
+                "version": 0, 
+                "L1RequestFromL2Cache": {
+                    "ordered": false, 
+                    "name": "L1RequestFromL2Cache", 
+                    "cxx_class": "MessageBuffer", 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "master": {
+                        "peer": "system.ruby.network.slave[3]", 
+                        "role": "MASTER"
+                    }, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.l2_cntrl0.L1RequestFromL2Cache", 
+                    "type": "MessageBuffer"
+                }, 
+                "default_p_state": "UNDEFINED", 
+                "p_state_clk_gate_max": 1000000000000, 
+                "eventq_index": 0, 
+                "number_of_TBEs": 256, 
+                "p_state_clk_gate_min": 1000, 
+                "transitions_per_cycle": 4, 
+                "L2cache": {
+                    "size": 262144, 
+                    "resourceStalls": false, 
+                    "is_icache": false, 
+                    "name": "L2cache", 
+                    "eventq_index": 0, 
+                    "dataAccessLatency": 1, 
+                    "tagArrayBanks": 1, 
+                    "tagAccessLatency": 1, 
+                    "replacement_policy": {
+                        "name": "replacement_policy", 
+                        "eventq_index": 0, 
+                        "assoc": 8, 
+                        "cxx_class": "PseudoLRUPolicy", 
+                        "path": "system.ruby.l2_cntrl0.L2cache.replacement_policy", 
+                        "block_size": 64, 
+                        "type": "PseudoLRUReplacementPolicy", 
+                        "size": 262144
+                    }, 
+                    "assoc": 8, 
+                    "start_index_bit": 7, 
+                    "cxx_class": "CacheMemory", 
+                    "path": "system.ruby.l2_cntrl0.L2cache", 
+                    "block_size": 0, 
+                    "type": "RubyCache", 
+                    "dataArrayBanks": 1, 
+                    "ruby_system": "system.ruby"
+                }, 
+                "triggerQueue": {
+                    "ordered": true, 
+                    "name": "triggerQueue", 
+                    "cxx_class": "MessageBuffer", 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.l2_cntrl0.triggerQueue", 
+                    "type": "MessageBuffer"
+                }, 
+                "power_model": [], 
+                "addr_ranges": [
+                    "0:18446744073709551615:0:0:0:0"
+                ], 
+                "GlobalRequestToL2Cache": {
+                    "ordered": false, 
+                    "name": "GlobalRequestToL2Cache", 
+                    "cxx_class": "MessageBuffer", 
+                    "slave": {
+                        "peer": "system.ruby.network.master[2]", 
+                        "role": "SLAVE"
+                    }, 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.l2_cntrl0.GlobalRequestToL2Cache", 
+                    "type": "MessageBuffer"
+                }, 
+                "buffer_size": 0, 
+                "ruby_system": "system.ruby", 
+                "name": "l2_cntrl0", 
+                "p_state_clk_gate_bins": 20, 
+                "responseFromL2Cache": {
+                    "ordered": false, 
+                    "name": "responseFromL2Cache", 
+                    "cxx_class": "MessageBuffer", 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "master": {
+                        "peer": "system.ruby.network.slave[4]", 
+                        "role": "MASTER"
+                    }, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.l2_cntrl0.responseFromL2Cache", 
+                    "type": "MessageBuffer"
+                }, 
+                "request_latency": 2, 
+                "path": "system.ruby.l2_cntrl0", 
+                "responseToL2Cache": {
+                    "ordered": false, 
+                    "name": "responseToL2Cache", 
+                    "cxx_class": "MessageBuffer", 
+                    "slave": {
+                        "peer": "system.ruby.network.master[4]", 
+                        "role": "SLAVE"
+                    }, 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.l2_cntrl0.responseToL2Cache", 
+                    "type": "MessageBuffer"
+                }
+            }, 
+            "clk_domain": {
+                "name": "clk_domain", 
+                "clock": [
+                    500
+                ], 
+                "init_perf_level": 0, 
+                "voltage_domain": "system.voltage_domain", 
+                "eventq_index": 0, 
+                "cxx_class": "SrcClockDomain", 
+                "path": "system.ruby.clk_domain", 
+                "type": "SrcClockDomain", 
+                "domain_id": -1
+            }, 
+            "randomization": false, 
+            "eventq_index": 0, 
+            "default_p_state": "UNDEFINED", 
+            "p_state_clk_gate_max": 1000000000000, 
+            "phys_mem": null, 
+            "type": "RubySystem", 
+            "p_state_clk_gate_min": 1000, 
+            "hot_lines": false, 
+            "power_model": [], 
+            "path": "system.ruby", 
+            "memctrl_clk_domain": {
+                "name": "memctrl_clk_domain", 
+                "clk_domain": "system.ruby.clk_domain", 
+                "eventq_index": 0, 
+                "cxx_class": "DerivedClockDomain", 
+                "path": "system.ruby.memctrl_clk_domain", 
+                "type": "DerivedClockDomain", 
+                "clk_divider": 3
+            }, 
+            "name": "ruby", 
+            "p_state_clk_gate_bins": 20, 
+            "block_size_bytes": 64, 
+            "access_backing_store": false, 
+            "number_of_virtual_networks": 3, 
+            "num_of_sequencers": 1, 
+            "dir_cntrl0": {
+                "system": "system", 
+                "cluster_id": 0, 
+                "responseFromMemory": {
+                    "ordered": false, 
+                    "name": "responseFromMemory", 
+                    "cxx_class": "MessageBuffer", 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.dir_cntrl0.responseFromMemory", 
+                    "type": "MessageBuffer"
+                }, 
+                "cxx_class": "Directory_Controller", 
+                "forwardFromDir": {
+                    "ordered": false, 
+                    "name": "forwardFromDir", 
+                    "cxx_class": "MessageBuffer", 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "master": {
+                        "peer": "system.ruby.network.slave[9]", 
+                        "role": "MASTER"
+                    }, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.dir_cntrl0.forwardFromDir", 
+                    "type": "MessageBuffer"
+                }, 
+                "type": "Directory_Controller", 
+                "recycle_latency": 10, 
+                "clk_domain": "system.ruby.clk_domain", 
+                "version": 0, 
+                "eventq_index": 0, 
+                "default_p_state": "UNDEFINED", 
+                "p_state_clk_gate_max": 1000000000000, 
+                "directory_latency": 6, 
+                "number_of_TBEs": 256, 
+                "to_memory_controller_latency": 1, 
+                "p_state_clk_gate_min": 1000, 
+                "responseFromDir": {
+                    "ordered": false, 
+                    "name": "responseFromDir", 
+                    "cxx_class": "MessageBuffer", 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "master": {
+                        "peer": "system.ruby.network.slave[8]", 
+                        "role": "MASTER"
+                    }, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.dir_cntrl0.responseFromDir", 
+                    "type": "MessageBuffer"
+                }, 
+                "transitions_per_cycle": 32, 
+                "memory": {
+                    "peer": "system.mem_ctrls.port", 
+                    "role": "MASTER"
+                }, 
+                "power_model": [], 
+                "addr_ranges": [
+                    "0:536870911:5:19:0:0"
+                ], 
+                "buffer_size": 0, 
+                "ruby_system": "system.ruby", 
+                "requestToDir": {
+                    "ordered": false, 
+                    "name": "requestToDir", 
+                    "cxx_class": "MessageBuffer", 
+                    "slave": {
+                        "peer": "system.ruby.network.master[8]", 
+                        "role": "SLAVE"
+                    }, 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.dir_cntrl0.requestToDir", 
+                    "type": "MessageBuffer"
+                }, 
+                "name": "dir_cntrl0", 
+                "p_state_clk_gate_bins": 20, 
+                "responseToDir": {
+                    "ordered": false, 
+                    "name": "responseToDir", 
+                    "cxx_class": "MessageBuffer", 
+                    "slave": {
+                        "peer": "system.ruby.network.master[9]", 
+                        "role": "SLAVE"
+                    }, 
+                    "randomization": false, 
+                    "eventq_index": 0, 
+                    "buffer_size": 0, 
+                    "path": "system.ruby.dir_cntrl0.responseToDir", 
+                    "type": "MessageBuffer"
+                }, 
+                "directory": {
+                    "name": "directory", 
+                    "addr_ranges": [
+                        "0:536870911:5:19:0:0"
+                    ], 
+                    "eventq_index": 0, 
+                    "cxx_class": "DirectoryMemory", 
+                    "path": "system.ruby.dir_cntrl0.directory", 
+                    "type": "RubyDirectoryMemory"
+                }, 
+                "path": "system.ruby.dir_cntrl0"
+            }
+        }, 
         "name": "system", 
         "init_param": 0, 
         "p_state_clk_gate_bins": 20, 
@@ -161,10 +2422,6 @@
                         "p_state_clk_gate_max": 1000000000000, 
                         "path": "system.cpu.itb.walker", 
                         "type": "ArmTableWalker", 
-                        "port": {
-                            "peer": "system.membus.slave[3]", 
-                            "role": "MASTER"
-                        }, 
                         "num_squash_per_cycle": 2
                     }, 
                     "path": "system.cpu.itb", 
@@ -209,23 +2466,21 @@
                 }, 
                 "function_trace": false, 
                 "do_checkpoint_insts": true, 
-                "cxx_class": "AtomicSimpleCPU", 
+                "cxx_class": "TimingSimpleCPU", 
                 "max_loads_all_threads": 0, 
-                "simulate_data_stalls": false, 
                 "system": "system", 
                 "clk_domain": "system.cpu_clk_domain", 
                 "function_trace_start": 0, 
                 "cpu_id": 0, 
-                "width": 1, 
                 "checker": null, 
                 "eventq_index": 0, 
                 "default_p_state": "UNDEFINED", 
                 "p_state_clk_gate_max": 1000000000000, 
                 "do_quiesce": true, 
-                "type": "AtomicSimpleCPU", 
+                "type": "TimingSimpleCPU", 
                 "profile": 0, 
                 "icache_port": {
-                    "peer": "system.membus.slave[1]", 
+                    "peer": "system.ruby.l1_cntrl0.sequencer.slave[0]", 
                     "role": "MASTER"
                 }, 
                 "p_state_clk_gate_bins": 20, 
@@ -241,7 +2496,7 @@
                     }
                 ], 
                 "dcache_port": {
-                    "peer": "system.membus.slave[2]", 
+                    "peer": "system.ruby.l1_cntrl0.sequencer.slave[1]", 
                     "role": "MASTER"
                 }, 
                 "socket_id": 0, 
@@ -309,7 +2564,9 @@
                         "path": "system.cpu.workload", 
                         "name": "workload", 
                         "cmd": [
-                            "/home/andrew/ece511/gem5/ece511/ece511_mp1/fft"
+                            "/home/andrew/ece511/gem5/ece511/ece511_mp1/fft", 
+                            "-m16", 
+                            "-p2"
                         ], 
                         "errout": "cerr", 
                         "useArchPT": false, 
@@ -339,10 +2596,6 @@
                         "p_state_clk_gate_max": 1000000000000, 
                         "path": "system.cpu.dtb.walker", 
                         "type": "ArmTableWalker", 
-                        "port": {
-                            "peer": "system.membus.slave[4]", 
-                            "role": "MASTER"
-                        }, 
                         "num_squash_per_cycle": 2
                     }, 
                     "path": "system.cpu.dtb", 
@@ -351,7 +2604,6 @@
                 }, 
                 "simpoint_start_insts": [], 
                 "max_insts_any_thread": 0, 
-                "simulate_inst_stalls": false, 
                 "progress_interval": 0, 
                 "branchPred": null, 
                 "isa": [
@@ -441,7 +2693,7 @@
                 "write_high_thresh_perc": 85, 
                 "IDD2N2": 0.0, 
                 "port": {
-                    "peer": "system.membus.master[0]", 
+                    "peer": "system.ruby.dir_cntrl0.memory", 
                     "role": "SLAVE"
                 }, 
                 "IDD4R": 0.157, 
@@ -474,7 +2726,7 @@
                 "tRAS": 35000, 
                 "static_frontend_latency": 10000, 
                 "devices_per_rank": 8, 
-                "range": "0:536870911:6:19:0:0", 
+                "range": "0:536870911:5:19:0:0", 
                 "mem_sched_policy": "frfcfs", 
                 "IDD2P12": 0.0, 
                 "device_rowbuffer_size": 1024, 
