@@ -17,8 +17,11 @@ L1D_SIZE='64kB'
 # L2 Cache Settings
 L2_SIZE='256kB'
 
+# L3 Cache Settings
+L3_SIZE='2MB'
+
 $GEM5_DIR/$GEM5_BUILD_DIR/gem5.opt \
---outdir=$GEM5_DIR/1.1_bl_fft \
+--outdir=$GEM5_DIR/1.1_l3_fft \
 $GEM5_DIR/$CONF_DIR/se.py \
 --cmd=$GEM5_DIR/fft \
 --options="$BINARY_ARGS" \
@@ -28,10 +31,12 @@ $GEM5_DIR/$CONF_DIR/se.py \
 --l1d_size=$L1D_SIZE \
 --l2cache \
 --l2_size=$L2_SIZE \
---caches > 1.1_bl_fft.out &
+--l3cache \
+--l3_size=$L3_SIZE \
+--caches > 1.1_l3_fft.out &
 
 $GEM5_DIR/$GEM5_BUILD_DIR/gem5.opt \
---outdir=$GEM5_DIR/1.1_bl_cm \
+--outdir=$GEM5_DIR/1.1_l3_cm \
 $GEM5_DIR/$CONF_DIR/se.py \
 --cmd=$GEM5_DIR/correlation_medium \
 --num-cpus=$NUM_CPUS \
@@ -40,4 +45,6 @@ $GEM5_DIR/$CONF_DIR/se.py \
 --l1d_size=$L1D_SIZE \
 --l2cache \
 --l2_size=$L2_SIZE \
---caches > 1.1_bl_cm.out &
+--l3cache \
+--l3_size=$L3_SIZE \
+--caches > 1.1_l3_cm.out &
