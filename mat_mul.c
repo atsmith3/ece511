@@ -63,10 +63,11 @@ int idx(int y, int x, int dim) {
 }
 
 void mat_mul(int* A, int* B, int* C, int n) {
-  for (int i = 0; i < n; i++) {
-    for(int j = 0; j < n; j++) {
+  int i, j, k;
+  for (i = 0; i < n; i++) {
+    for(j = 0; j < n; j++) {
       C[idx(i, j, n)] = 0;
-      for(int k = 0; k < n; k++) {
+      for(k = 0; k < n; k++) {
         C[idx(i, j, n)] += A[idx(i, k, n)]*B[idx(k, j, n)];
       }
     }
@@ -74,12 +75,13 @@ void mat_mul(int* A, int* B, int* C, int n) {
 }
 
 void mat_mul_tile(int* A, int* B, int* C, int n, int m) {
-  for (int i = 0; i < n; i+=m) {
-    for(int j = 0; j < n; j+=m) {
-      for(int a = 0; a < m; a++) {
-        for(int b = 0; b < m; b++) {
+  int a,b,i,j,k;
+  for (i = 0; i < n; i+=m) {
+    for(j = 0; j < n; j+=m) {
+      for(a = 0; a < m; a++) {
+        for(b = 0; b < m; b++) {
           C[idx(i+a, j+b, n)] = 0;
-          for(int k = 0; k < n; k++) {
+          for(k = 0; k < n; k++) {
             C[idx(i+a, j+b, n)] += A[idx(i+a, k, n)]*B[idx(k, j+b, n)];
           }
         }
