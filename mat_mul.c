@@ -11,25 +11,17 @@ int main(int argc, char** argv) {
   int n = 0;
   int t = 0;
   int m = 0;
-  char c;
-  opterr = 0;
 
+  if(argc != 2 && argc !=3) {
+    printf("Usage:\n./mat_mul <matrix_dimension> <optional:tile_size>\n");
+    return -1;
+  }
 
-  while ((c = getopt (argc, argv, "n:tm:")) != -1) {
-    switch (c){
-      case 'n':
-        n = atoi(optarg);
-        break;
-      case 't':
-        t = 1;
-        break;
-      case 'm':
-        m = atoi(optarg);
-        break;
-      default:
-        printf("Argument Needed\n -n <dimension> -t <enable_tiling> -m <tile_size>\n");
-        return -1;
-    }
+  n = atoi(argv[1]);
+
+  if(argc == 3) {
+    t = 1;
+    m = atoi(argv[2]);
   }
 
   if(t == 1) {
