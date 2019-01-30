@@ -16,7 +16,7 @@ $GEM5_BUILD -d $OUTPUT_DIR/64kB $CONFIG_FILE \
 --disk-image=$GEM5_DIR/$IMAGE \
 --kernel=$GEM5_DIR/$KERNEL \
 --dtb-filename=$GEM5_DIR/$DTB \
---cpu-type=AtomicSimpleCPU \
+--restore-with-cpu=TimingSimpleCPU \
 --num-cpus=2 --caches --l2cache --l2_size='64kB' \
 --script=$GEM5_DIR/$RCS_SCRIPT \
---checkpoint-dir=$GEM5_DIR/$OUTPUT_DIR/$CHKPT_DIR -r 1 > 1.2_fs_64kB.out &
+--checkpoint-dir=$GEM5_DIR/$OUTPUT_DIR/$CHKPT_DIR -r 1 &

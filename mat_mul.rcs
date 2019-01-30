@@ -1,11 +1,11 @@
 cd ./home
-./sbin/m5 resetstats
+/sbin/m5 resetstats
 ./mat_mul 100
-./sbin/m5 dumpstats
-./sbin/m5 resetstats
+/sbin/m5 dumpstats
+/sbin/m5 resetstats
 ./mat_mul 100 10
-./sbin/m5 dumpstats
-./sbin/m5 resetstats
+/sbin/m5 dumpstats
+/sbin/m5 resetstats
 ./mat_mul 100 25
-./sbin/m5 dumpstats
-./sbin/m5 exit
+/sbin/m5 dumpstats
+/sbin/m5 exit
