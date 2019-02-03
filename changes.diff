@@ -1,0 +1,498 @@
+diff -r d649aeebdc34 configs/common/CacheConfig.py
+--- a/configs/common/CacheConfig.py	Mon Jan 28 14:15:10 2019 -0600
++++ b/configs/common/CacheConfig.py	Sun Feb 03 02:05:23 2019 -0600
+@@ -62,12 +62,12 @@
+             print("O3_ARM_v7a_3 is unavailable. Did you compile the O3 model?")
+             sys.exit(1)
+ 
+-        dcache_class, icache_class, l2_cache_class, walk_cache_class = \
+-            O3_ARM_v7a_DCache, O3_ARM_v7a_ICache, O3_ARM_v7aL2, \
++        dcache_class, icache_class, l2_cache_class, l3_cache_class, walk_cache_class = \
++            O3_ARM_v7a_DCache, O3_ARM_v7a_ICache, O3_ARM_v7aL2, L3Cache, \
+             O3_ARM_v7aWalkCache
+     else:
+-        dcache_class, icache_class, l2_cache_class, walk_cache_class = \
+-            L1_DCache, L1_ICache, L2Cache, None
++        dcache_class, icache_class, l2_cache_class, l3_cache_class, walk_cache_class = \
++            L1_DCache, L1_ICache, L2Cache, L3Cache, None
+ 
+         if buildEnv['TARGET_ISA'] == 'x86':
+             walk_cache_class = PageTableWalkerCache
+@@ -79,20 +79,51 @@
+     # minimal so that compute delays do not include memory access latencies.
+     # Configure the compulsory L1 caches for the O3CPU, do not configure
+     # any more caches.
+-    if options.l2cache and options.elastic_trace_en:
++    if (options.l2cache or options.l3cache) and options.elastic_trace_en:
+         fatal("When elastic trace is enabled, do not configure L2 caches.")
+ 
+     if options.l2cache:
++        if options.num_l2caches < 1:
++          fatal("Num L2 Caches must be > 1")
++
++        if (options.num_cpus % options.num_l2caches) != 0:
++          fatal("Num CPU's must be divisible by number of L2 Caches")
++
+         # Provide a clock for the L2 and the L1-to-L2 bus here as they
+         # are not connected using addTwoLevelCacheHierarchy. Use the
+         # same clock as the CPUs.
+-        system.l2 = l2_cache_class(clk_domain=system.cpu_clk_domain,
+-                                   size=options.l2_size,
+-                                   assoc=options.l2_assoc)
++        system.l2 = [l2_cache_class(clk_domain=system.cpu_clk_domain,
++                                    size=options.l2_size,
++                                    assoc=options.l2_assoc)
++                                    for i in range(options.num_l2caches)]
+ 
+-        system.tol2bus = L2XBar(clk_domain = system.cpu_clk_domain)
+-        system.l2.cpu_side = system.tol2bus.master
+-        system.l2.mem_side = system.membus.slave
++        system.tol2bus = [L2XBar(clk_domain = system.cpu_clk_domain)
++                                for i in range(options.num_l2caches)]
++
++
++        for i in range(options.num_l2caches):
++          system.l2[i].cpu_side = system.tol2bus[i].master
++
++        if options.l3cache:
++          # Single L3 Bus
++          system.tol3bus = L2XBar(clk_domain = system.cpu_clk_domain)
++          
++          for i in range( options.num_l2caches):
++            system.l2[i].mem_side = system.tol3bus.slave
++        else:
++          for i in range(options.num_l2caches):
++            system.l2[i].mem_side = system.membus.slave
++
++    if options.l3cache:
++        # Provide a clock for the L3 and the L2-to-L3 bus here as they
++        # are not connected using addTwoLevelCacheHierarchy. Use the
++        # same clock as the CPUs.
++        system.l3 = l3_cache_class(clk_domain=system.cpu_clk_domain,
++                                   size=options.l3_size,
++                                   assoc=options.l3_assoc)
++
++        system.l3.cpu_side = system.tol3bus.master
++        system.l3.mem_side = system.membus.slave
+ 
+     if options.memchecker:
+         system.memchecker = MemChecker()
+@@ -158,7 +189,8 @@
+ 
+         system.cpu[i].createInterruptController()
+         if options.l2cache:
+-            system.cpu[i].connectAllPorts(system.tol2bus, system.membus)
++            j = i % options.num_l2caches
++            system.cpu[i].connectAllPorts(system.tol2bus[j], system.membus)
+         elif options.external_memory_system:
+             system.cpu[i].connectUncachedPorts(system.membus)
+         else:
+diff -r d649aeebdc34 configs/common/Caches.py
+--- a/configs/common/Caches.py	Mon Jan 28 14:15:10 2019 -0600
++++ b/configs/common/Caches.py	Sun Feb 03 02:05:23 2019 -0600
+@@ -72,6 +72,15 @@
+     tgts_per_mshr = 12
+     write_buffers = 8
+ 
++class L3Cache(Cache):
++    assoc = 16
++    tag_latency = 20
++    data_latency = 20
++    response_latency = 20
++    mshrs = 512
++    tgts_per_mshr = 20
++    write_buffers = 256
++
+ class IOCache(Cache):
+     assoc = 8
+     tag_latency = 50
+diff -r d649aeebdc34 configs/common/Options.py
+--- a/configs/common/Options.py	Mon Jan 28 14:15:10 2019 -0600
++++ b/configs/common/Options.py	Sun Feb 03 02:05:23 2019 -0600
+@@ -98,9 +98,10 @@
+                       help="use external port for SystemC TLM cosimulation")
+     parser.add_option("--caches", action="store_true")
+     parser.add_option("--l2cache", action="store_true")
++    parser.add_option("--l3cache", action="store_true")
+     parser.add_option("--num-dirs", type="int", default=1)
+-    parser.add_option("--num-l2caches", type="int", default=1)
+-    parser.add_option("--num-l3caches", type="int", default=1)
++    parser.add_option("--num_l2caches", type="int", default=1)
++    parser.add_option("--num_l3caches", type="int", default=1)
+     parser.add_option("--l1d_size", type="string", default="64kB")
+     parser.add_option("--l1i_size", type="string", default="32kB")
+     parser.add_option("--l2_size", type="string", default="2MB")
+diff -r d649aeebdc34 configs/common/SysPaths.py
+--- a/configs/common/SysPaths.py	Mon Jan 28 14:15:10 2019 -0600
++++ b/configs/common/SysPaths.py	Sun Feb 03 02:05:23 2019 -0600
+@@ -32,7 +32,7 @@
+ config_root = os.path.dirname(config_path)
+ 
+ class PathSearchFunc(object):
+-    _sys_paths = None
++    _sys_paths = ['/home/andrew/ece511/gem5/benchmarks/FSmode','']
+ 
+     def __init__(self, subdirs, sys_paths=None):
+         if isinstance(subdirs, basestring):
+diff -r d649aeebdc34 include/gem5/asm/generic/m5ops.h
+--- a/include/gem5/asm/generic/m5ops.h	Mon Jan 28 14:15:10 2019 -0600
++++ b/include/gem5/asm/generic/m5ops.h	Sun Feb 03 02:05:23 2019 -0600
+@@ -72,8 +72,10 @@
+ #define M5OP_ADD_SYMBOL         0x53
+ #define M5OP_PANIC              0x54
+ 
+-#define M5OP_RESERVED2          0x56 // Reserved for user
+-#define M5OP_RESERVED3          0x57 // Reserved for user
++//#define M5OP_RESERVED2          0x56 // Reserved for user
++//#define M5OP_RESERVED3          0x57 // Reserved for user
++#define M5OP_MEM_STATS          0x56 // Reserved for user
++#define M5OP_CACHE_STATS          0x57 // Reserved for user
+ #define M5OP_RESERVED4          0x58 // Reserved for user
+ #define M5OP_RESERVED5          0x59 // Reserved for user
+ 
+@@ -119,6 +121,8 @@
+     M5OP(m5_reset_stats, M5OP_RESET_STATS, 0);                  \
+     M5OP(m5_dump_stats, M5OP_DUMP_STATS, 0);                    \
+     M5OP(m5_dump_reset_stats, M5OP_DUMP_RESET_STATS, 0);        \
++    M5OP(m5_mem_stats, M5OP_MEM_STATS, 0);                      \
++    M5OP(m5_cache_stats, M5OP_CACHE_STATS, 0);                  \
+     M5OP(m5_checkpoint, M5OP_CHECKPOINT, 0);                    \
+     M5OP(m5_read_file, M5OP_READ_FILE, 0);                      \
+     M5OP(m5_write_file, M5OP_WRITE_FILE, 0);                    \
+diff -r d649aeebdc34 include/gem5/m5ops.h
+--- a/include/gem5/m5ops.h	Mon Jan 28 14:15:10 2019 -0600
++++ b/include/gem5/m5ops.h	Sun Feb 03 02:05:23 2019 -0600
+@@ -55,6 +55,8 @@
+ void m5_reset_stats(uint64_t ns_delay, uint64_t ns_period);
+ void m5_dump_stats(uint64_t ns_delay, uint64_t ns_period);
+ void m5_dump_reset_stats(uint64_t ns_delay, uint64_t ns_period);
++uint64_t m5_mem_stats(uint64_t key_str1, uint64_t key_str2);
++double m5_cache_stats(uint64_t key_str1, uint64_t key_str2);
+ uint64_t m5_read_file(void *buffer, uint64_t len, uint64_t offset);
+ uint64_t m5_write_file(void *buffer, uint64_t len, uint64_t offset,
+                        const char *filename);
+diff -r d649aeebdc34 src/arch/arm/isa/formats/aarch64.isa
+--- a/src/arch/arm/isa/formats/aarch64.isa	Mon Jan 28 14:15:10 2019 -0600
++++ b/src/arch/arm/isa/formats/aarch64.isa	Sun Feb 03 02:05:23 2019 -0600
+@@ -2116,6 +2116,7 @@
+           case M5OP_SWITCH_CPU: return new M5switchcpu(machInst);
+           case M5OP_ADD_SYMBOL: return new M5addsymbol64(machInst);
+           case M5OP_PANIC: return new M5panic(machInst);
++          case M5OP_MEM_STATS: return new MemStats(machInst);
+           case M5OP_WORK_BEGIN: return new M5workbegin64(machInst);
+           case M5OP_WORK_END: return new M5workend64(machInst);
+           default: return new Unknown64(machInst);
+diff -r d649aeebdc34 src/arch/arm/isa/formats/m5ops.isa
+--- a/src/arch/arm/isa/formats/m5ops.isa	Mon Jan 28 14:15:10 2019 -0600
++++ b/src/arch/arm/isa/formats/m5ops.isa	Sun Feb 03 02:05:23 2019 -0600
+@@ -66,6 +66,7 @@
+             case M5OP_SWITCH_CPU: return new M5switchcpu(machInst);
+             case M5OP_ADD_SYMBOL: return new M5addsymbol(machInst);
+             case M5OP_PANIC: return new M5panic(machInst);
++            case M5OP_MEM_STATS: return new MemStats(machInst);
+             case M5OP_WORK_BEGIN: return new M5workbegin(machInst);
+             case M5OP_WORK_END: return new M5workend(machInst);
+             default: return new Unknown(machInst);
+diff -r d649aeebdc34 src/arch/arm/isa/insts/m5ops.isa
+--- a/src/arch/arm/isa/insts/m5ops.isa	Mon Jan 28 14:15:10 2019 -0600
++++ b/src/arch/arm/isa/insts/m5ops.isa	Sun Feb 03 02:05:23 2019 -0600
+@@ -54,6 +54,27 @@
+     uint64_t join32to64(uint32_t r1, uint32_t r0);
+     '''
+ 
++    memStatsCode = '''
++    PseudoInst::dumpstats(xc->tcBase(), 0, 0);
++    uint64_t ip_val = PseudoInst::mem_stats(xc->tcBase(), join32to64(R1,R0), join32to64(R3,R2));
++    R0 = bits(ip_val, 31, 0);
++    R1 = bits(ip_val, 64, 31);
++    '''
++
++    memStatsCode64 = '''
++    PseudoInst::dumpstats(xc->tcBase(), 0, 0);
++    X0 = PseudoInst::mem_stats(xc->tcBase(), X0, X1);
++    '''
++
++    memStatsIop = InstObjParams("mem_stats", "MemStats", "PredOp", {"code": memStatsCode, "predicate_test": predicateTest}, ["IsNonSpeculative"])
++    header_output += BasicDeclare.subst(memStatsIop)
++    decoder_output += BasicConstructor.subst(memStatsIop)
++    exec_output += PredOpExecute.subst(memStatsIop)
++
++    memStatsIop = InstObjParams("mem_stats", "MemStats64", "PredOp", { "code": memStatsCode64, "predicate_test": predicateTest }, ["IsNonSpeculative"])
++    header_output += BasicDeclare.subst(memStatsIop)
++    decoder_output += BasicConstructor.subst(memStatsIop)
++    exec_output += PredOpExecute.subst(memStatsIop)
+ 
+     armCode = '''
+     PseudoInst::arm(xc->tcBase());
+diff -r d649aeebdc34 src/mem/cache/cache.cc
+--- a/src/mem/cache/cache.cc	Mon Jan 28 14:15:10 2019 -0600
++++ b/src/mem/cache/cache.cc	Sun Feb 03 02:05:23 2019 -0600
+@@ -393,6 +393,8 @@
+             if (blk == nullptr) {
+                 // no replaceable block available: give up, fwd to next level.
+                 incMissCount(pkt);
++                cache_stats_miss_no++;
++                cache_stats_total_no++;
+                 return false;
+             }
+             tags->insertBlock(pkt, blk);
+@@ -419,6 +421,8 @@
+         std::memcpy(blk->data, pkt->getConstPtr<uint8_t>(), blkSize);
+         DPRINTF(Cache, "%s new state is %s\n", __func__, blk->print());
+         incHitCount(pkt);
++        cache_stats_hit_no++;
++        cache_stats_total_no++;
+         // populate the time when the block will be ready to access.
+         blk->whenReady = clockEdge(fillLatency) + pkt->headerDelay +
+             pkt->payloadDelay;
+@@ -456,6 +460,8 @@
+                     // no replaceable block available: give up, fwd to
+                     // next level.
+                     incMissCount(pkt);
++                    cache_stats_miss_no++;
++                    cache_stats_total_no++;
+                     return false;
+                 }
+                 tags->insertBlock(pkt, blk);
+@@ -481,6 +487,8 @@
+         DPRINTF(Cache, "%s new state is %s\n", __func__, blk->print());
+ 
+         incHitCount(pkt);
++        cache_stats_hit_no++;
++        cache_stats_total_no++;
+         // populate the time when the block will be ready to access.
+         blk->whenReady = clockEdge(fillLatency) + pkt->headerDelay +
+             pkt->payloadDelay;
+@@ -491,6 +499,8 @@
+                        blk->isReadable())) {
+         // OK to satisfy access
+         incHitCount(pkt);
++        cache_stats_hit_no++;
++        cache_stats_total_no++;
+         satisfyRequest(pkt, blk);
+         maintainClusivity(pkt->fromCache(), blk);
+ 
+@@ -501,6 +511,8 @@
+     // or have block but need writable
+ 
+     incMissCount(pkt);
++    cache_stats_miss_no++;
++    cache_stats_total_no++;
+ 
+     if (blk == nullptr && pkt->isLLSC() && pkt->isWrite()) {
+         // complete miss on store conditional... just give up now
+diff -r d649aeebdc34 src/mem/dram_ctrl.cc
+--- a/src/mem/dram_ctrl.cc	Mon Jan 28 14:15:10 2019 -0600
++++ b/src/mem/dram_ctrl.cc	Sun Feb 03 02:05:23 2019 -0600
+@@ -616,6 +616,9 @@
+             addToReadQueue(pkt, dram_pkt_count);
+             readReqs++;
+             bytesReadSys += size;
++            /* Counters for mem_stats */
++            mem_stats_read_req_no++;
++            mem_stats_total_req_no++;
+         }
+     } else {
+         assert(pkt->isWrite());
+@@ -630,6 +633,8 @@
+             addToWriteQueue(pkt, dram_pkt_count);
+             writeReqs++;
+             bytesWrittenSys += size;
++            mem_stats_read_req_no++;
++            mem_stats_total_req_no++;
+         }
+     }
+ 
+diff -r d649aeebdc34 src/mem/dram_ctrl.hh
+--- a/src/mem/dram_ctrl.hh	Mon Jan 28 14:15:10 2019 -0600
++++ b/src/mem/dram_ctrl.hh	Sun Feb 03 02:05:23 2019 -0600
+@@ -68,6 +68,7 @@
+ #include "params/DRAMCtrl.hh"
+ #include "sim/eventq.hh"
+ #include "mem/drampower.hh"
++#include "sim/full_system.hh"
+ 
+ /**
+  * The DRAM controller is a single-channel memory controller capturing
+diff -r d649aeebdc34 src/sim/full_system.hh
+--- a/src/sim/full_system.hh	Mon Jan 28 14:15:10 2019 -0600
++++ b/src/sim/full_system.hh	Sun Feb 03 02:05:23 2019 -0600
+@@ -45,4 +45,20 @@
+  */
+ extern unsigned int FullSystemInt;
+ 
++/* 
++ * Global counters for pseudo op
++ *  mem_stats
++ */
++extern uint64_t mem_stats_read_req_no;
++extern uint64_t mem_stats_write_req_no;
++extern uint64_t mem_stats_total_req_no;
++
++/* 
++ * Global counters for pseudo op
++ *  cache_stats
++ */
++extern uint64_t cache_stats_hit_no;
++extern uint64_t cache_stats_miss_no;
++extern uint64_t cache_stats_total_no;
++
+ #endif // __SIM_FULL_SYSTEM_HH__
+diff -r d649aeebdc34 src/sim/pseudo_inst.cc
+--- a/src/sim/pseudo_inst.cc	Mon Jan 28 14:15:10 2019 -0600
++++ b/src/sim/pseudo_inst.cc	Sun Feb 03 02:05:23 2019 -0600
+@@ -164,6 +164,10 @@
+         dumpresetstats(tc, args[0], args[1]);
+         break;
+ 
++      case M5OP_MEM_STATS:
++        return mem_stats(tc, args[0], args[1]);
++        break;
++
+       case M5OP_CHECKPOINT:
+         m5checkpoint(tc, args[0], args[1]);
+         break;
+@@ -198,7 +202,7 @@
+         break;
+ 
+       case M5OP_ANNOTATE:
+-      case M5OP_RESERVED2:
++//      case M5OP_RESERVED2:
+       case M5OP_RESERVED3:
+       case M5OP_RESERVED4:
+       case M5OP_RESERVED5:
+@@ -474,6 +478,49 @@
+     Stats::schedStatEvent(true, true, when, repeat);
+ }
+ 
++uint64_t
++mem_stats(ThreadContext *tc, uint64_t key_str1, uint64_t key_str2)
++{
++  DPRINTF(PseudoInst, "PseudoInst::mem_stats() key:%s%s\n", (char*)&key_str1, (char*)&key_str2);
++  if(!FullSystem) {
++    panicFsOnlyPseudoInst("mem_stats");
++    return 0;
++  }
++
++  const int len = 2 * sizeof(uint64_t) + 1;
++  char key_str[len];
++  memset(key_str, '\0', len);
++  if (key_str1 == 0) {
++    assert(key_str2 == ​0​);  
++  } else {
++    strncpy(key_str, (char *)&key_str1, sizeof(uint64_t));
++  }
++  if (strlen(key_str) == sizeof(uint64_t)) {
++    strncpy(key_str + sizeof(uint64_t), (char *)&key_str2, sizeof(uint64_t));
++  }
++  else {
++    assert(key_str2 == 0);
++  }
++
++  //Compare the key parameter with the known values to select the return value
++  uint64_t val;
++  if(strcmp(key_str, "read") == 0) {
++    val = mem_stats_read_req_no;
++  }
++  else if(strcmp(key_str, "write") == 0) {
++    val = mem_stats_write_req_no;
++  }
++  else if(strcmp(key_str, "total") == 0) {
++    val = mem_stats_total_req_no;
++  }
++  else {
++    panic("Unknown key for mem_stats pseudo instruction:\"%s\"", key_str);
++  }
++
++  return val;
++
++}
++
+ void
+ m5checkpoint(ThreadContext *tc, Tick delay, Tick period)
+ {
+diff -r d649aeebdc34 src/sim/pseudo_inst.hh
+--- a/src/sim/pseudo_inst.hh	Mon Jan 28 14:15:10 2019 -0600
++++ b/src/sim/pseudo_inst.hh	Sun Feb 03 02:05:23 2019 -0600
+@@ -83,6 +83,7 @@
+ void resetstats(ThreadContext *tc, Tick delay, Tick period);
+ void dumpstats(ThreadContext *tc, Tick delay, Tick period);
+ void dumpresetstats(ThreadContext *tc, Tick delay, Tick period);
++uint64_t mem_stats(ThreadContext *tc, uint64_t key_str1, uint64_t key_str2);
+ void m5checkpoint(ThreadContext *tc, Tick delay, Tick period);
+ void debugbreak(ThreadContext *tc);
+ void switchcpu(ThreadContext *tc);
+diff -r d649aeebdc34 src/sim/root.cc
+--- a/src/sim/root.cc	Mon Jan 28 14:15:10 2019 -0600
++++ b/src/sim/root.cc	Sun Feb 03 02:05:23 2019 -0600
+@@ -135,6 +135,12 @@
+ 
+ bool FullSystem;
+ unsigned int FullSystemInt;
++uint64_t mem_stats_read_req_no;
++uint64_t mem_stats_write_req_no;
++uint64_t mem_stats_total_req_no;
++uint64_t cache_stats_hit_no;
++uint64_t cache_stats_miss_no;
++uint64_t cache_stats_total_no;
+ 
+ Root *
+ RootParams::create()
+@@ -147,6 +153,12 @@
+ 
+     FullSystem = full_system;
+     FullSystemInt = full_system ? 1 : 0;
++    mem_stats_read_req_no = 0;
++    mem_stats_write_req_no = 0;
++    mem_stats_total_req_no = 0;
++    cache_stats_hit_no = 0;
++    cache_stats_miss_no = 0;
++    cache_stats_total_no = 0;
+ 
+     return new Root(this);
+ }
+diff -r d649aeebdc34 util/m5/m5.c
+--- a/util/m5/m5.c	Mon Jan 28 14:15:10 2019 -0600
++++ b/util/m5/m5.c	Sun Feb 03 02:05:23 2019 -0600
+@@ -212,6 +212,32 @@
+ }
+ 
+ void
++do_mem_stats(int argc, char *argv[])
++{
++  if(argc > 1)
++    usage();
++
++  uint64_t key_str[2];
++  parse_str_args_to_regs(argc, argv, key_str, 2);
++  m5_dump_stats(0, 0);
++  uint64_t val = m5_mem_stats(key_str[0], key_str[1]);
++  printf("%"PRIu64, val);
++}
++
++void
++do_cache_stats(int argc, char *argv[])
++{
++  if(argc > 1)
++    usage();
++
++  uint64_t key_str[2];
++  parse_str_args_to_regs(argc, argv, key_str, 2);
++  m5_dump_stats(0, 0);
++  double val = m5_cache_stats(key_str[0], key_str[1]);
++  printf("%lf", val);
++}
++
++void
+ do_read_file(int argc, char *argv[])
+ {
+     if (argc > 0)
+@@ -343,6 +369,8 @@
+     { "resetstats",     do_reset_stats,      "[delay [period]]" },
+     { "dumpstats",      do_dump_stats,       "[delay [period]]" },
+     { "dumpresetstats", do_dump_reset_stats, "[delay [period]]" },
++    { "mem_stats",      do_mem_stats,        "[key]" },
++    { "cache_stats",    do_cache_stats,      "[key]" },
+     { "readfile",       do_read_file,        "" },
+     { "writefile",      do_write_file,       "<filename> [host filename]" },
+     { "execfile",       do_exec_file,        "" },
