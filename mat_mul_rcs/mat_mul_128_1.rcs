@@ -1,0 +1,8 @@
+cd ./home
+/sbin/m5 resetstats
+./mat_mul 128 1
+/sbin/m5 cache_stats miss
+/sbin/m5 cache_stats hit
+/sbin/m5 cache_stats total
+/sbin/m5 dumpstats
+/sbin/m5 exit

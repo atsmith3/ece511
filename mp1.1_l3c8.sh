@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Directories
-GEM5_DIR='/home/andrew/ece511/gem5_old'
+GEM5_DIR='/home/andrew/ece511/gem5'
 GEM5_BUILD_DIR='build/ARM'
 CONF_DIR='configs/example'
 
@@ -21,7 +21,7 @@ NUM_L2CACHES=2
 # L3 Cache Settings
 L3_SIZE='2MB'
 
-$GEM5_DIR/$GEM5_BUILD_DIR/gem5.opt \
+$GEM5_DIR/$GEM5_BUILD_DIR/gem5.fast \
 --outdir=$GEM5_DIR/1.1_l3c8_fft \
 $GEM5_DIR/$CONF_DIR/se.py \
 --cmd=$GEM5_DIR/fft \
@@ -37,7 +37,7 @@ $GEM5_DIR/$CONF_DIR/se.py \
 --l3_size=$L3_SIZE \
 --caches > 1.1_l3c8_fft.out &
 
-$GEM5_DIR/$GEM5_BUILD_DIR/gem5.opt \
+$GEM5_DIR/$GEM5_BUILD_DIR/gem5.fast \
 --outdir=$GEM5_DIR/1.1_l3c8_cm \
 $GEM5_DIR/$CONF_DIR/se.py \
 --cmd=$GEM5_DIR/correlation_medium \

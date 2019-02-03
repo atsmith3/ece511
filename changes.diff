@@ -1,6 +1,6 @@
 diff -r d649aeebdc34 configs/common/CacheConfig.py
 --- a/configs/common/CacheConfig.py	Mon Jan 28 14:15:10 2019 -0600
-+++ b/configs/common/CacheConfig.py	Sun Feb 03 02:05:23 2019 -0600
++++ b/configs/common/CacheConfig.py	Sun Feb 03 12:09:59 2019 -0600
 @@ -62,12 +62,12 @@
              print("O3_ARM_v7a_3 is unavailable. Did you compile the O3 model?")
              sys.exit(1)
@@ -89,7 +89,7 @@ diff -r d649aeebdc34 configs/common/CacheConfig.py
          else:
 diff -r d649aeebdc34 configs/common/Caches.py
 --- a/configs/common/Caches.py	Mon Jan 28 14:15:10 2019 -0600
-+++ b/configs/common/Caches.py	Sun Feb 03 02:05:23 2019 -0600
++++ b/configs/common/Caches.py	Sun Feb 03 12:09:59 2019 -0600
 @@ -72,6 +72,15 @@
      tgts_per_mshr = 12
      write_buffers = 8
@@ -108,7 +108,7 @@ diff -r d649aeebdc34 configs/common/Caches.py
      tag_latency = 50
 diff -r d649aeebdc34 configs/common/Options.py
 --- a/configs/common/Options.py	Mon Jan 28 14:15:10 2019 -0600
-+++ b/configs/common/Options.py	Sun Feb 03 02:05:23 2019 -0600
++++ b/configs/common/Options.py	Sun Feb 03 12:09:59 2019 -0600
 @@ -98,9 +98,10 @@
                        help="use external port for SystemC TLM cosimulation")
      parser.add_option("--caches", action="store_true")
@@ -124,7 +124,7 @@ diff -r d649aeebdc34 configs/common/Options.py
      parser.add_option("--l2_size", type="string", default="2MB")
 diff -r d649aeebdc34 configs/common/SysPaths.py
 --- a/configs/common/SysPaths.py	Mon Jan 28 14:15:10 2019 -0600
-+++ b/configs/common/SysPaths.py	Sun Feb 03 02:05:23 2019 -0600
++++ b/configs/common/SysPaths.py	Sun Feb 03 12:09:59 2019 -0600
 @@ -32,7 +32,7 @@
  config_root = os.path.dirname(config_path)
  
@@ -136,7 +136,7 @@ diff -r d649aeebdc34 configs/common/SysPaths.py
          if isinstance(subdirs, basestring):
 diff -r d649aeebdc34 include/gem5/asm/generic/m5ops.h
 --- a/include/gem5/asm/generic/m5ops.h	Mon Jan 28 14:15:10 2019 -0600
-+++ b/include/gem5/asm/generic/m5ops.h	Sun Feb 03 02:05:23 2019 -0600
++++ b/include/gem5/asm/generic/m5ops.h	Sun Feb 03 12:09:59 2019 -0600
 @@ -72,8 +72,10 @@
  #define M5OP_ADD_SYMBOL         0x53
  #define M5OP_PANIC              0x54
@@ -161,42 +161,44 @@ diff -r d649aeebdc34 include/gem5/asm/generic/m5ops.h
      M5OP(m5_write_file, M5OP_WRITE_FILE, 0);                    \
 diff -r d649aeebdc34 include/gem5/m5ops.h
 --- a/include/gem5/m5ops.h	Mon Jan 28 14:15:10 2019 -0600
-+++ b/include/gem5/m5ops.h	Sun Feb 03 02:05:23 2019 -0600
++++ b/include/gem5/m5ops.h	Sun Feb 03 12:09:59 2019 -0600
 @@ -55,6 +55,8 @@
  void m5_reset_stats(uint64_t ns_delay, uint64_t ns_period);
  void m5_dump_stats(uint64_t ns_delay, uint64_t ns_period);
  void m5_dump_reset_stats(uint64_t ns_delay, uint64_t ns_period);
 +uint64_t m5_mem_stats(uint64_t key_str1, uint64_t key_str2);
-+double m5_cache_stats(uint64_t key_str1, uint64_t key_str2);
++uint64_t m5_cache_stats(uint64_t key_str1, uint64_t key_str2);
  uint64_t m5_read_file(void *buffer, uint64_t len, uint64_t offset);
  uint64_t m5_write_file(void *buffer, uint64_t len, uint64_t offset,
                         const char *filename);
 diff -r d649aeebdc34 src/arch/arm/isa/formats/aarch64.isa
 --- a/src/arch/arm/isa/formats/aarch64.isa	Mon Jan 28 14:15:10 2019 -0600
-+++ b/src/arch/arm/isa/formats/aarch64.isa	Sun Feb 03 02:05:23 2019 -0600
-@@ -2116,6 +2116,7 @@
++++ b/src/arch/arm/isa/formats/aarch64.isa	Sun Feb 03 12:09:59 2019 -0600
+@@ -2116,6 +2116,8 @@
            case M5OP_SWITCH_CPU: return new M5switchcpu(machInst);
            case M5OP_ADD_SYMBOL: return new M5addsymbol64(machInst);
            case M5OP_PANIC: return new M5panic(machInst);
 +          case M5OP_MEM_STATS: return new MemStats(machInst);
++          case M5OP_CACHE_STATS: return new CacheStats(machInst);
            case M5OP_WORK_BEGIN: return new M5workbegin64(machInst);
            case M5OP_WORK_END: return new M5workend64(machInst);
            default: return new Unknown64(machInst);
 diff -r d649aeebdc34 src/arch/arm/isa/formats/m5ops.isa
 --- a/src/arch/arm/isa/formats/m5ops.isa	Mon Jan 28 14:15:10 2019 -0600
-+++ b/src/arch/arm/isa/formats/m5ops.isa	Sun Feb 03 02:05:23 2019 -0600
-@@ -66,6 +66,7 @@
++++ b/src/arch/arm/isa/formats/m5ops.isa	Sun Feb 03 12:09:59 2019 -0600
+@@ -66,6 +66,8 @@
              case M5OP_SWITCH_CPU: return new M5switchcpu(machInst);
              case M5OP_ADD_SYMBOL: return new M5addsymbol(machInst);
              case M5OP_PANIC: return new M5panic(machInst);
 +            case M5OP_MEM_STATS: return new MemStats(machInst);
++            case M5OP_CACHE_STATS: return new CacheStats(machInst);
              case M5OP_WORK_BEGIN: return new M5workbegin(machInst);
              case M5OP_WORK_END: return new M5workend(machInst);
              default: return new Unknown(machInst);
 diff -r d649aeebdc34 src/arch/arm/isa/insts/m5ops.isa
 --- a/src/arch/arm/isa/insts/m5ops.isa	Mon Jan 28 14:15:10 2019 -0600
-+++ b/src/arch/arm/isa/insts/m5ops.isa	Sun Feb 03 02:05:23 2019 -0600
-@@ -54,6 +54,27 @@
++++ b/src/arch/arm/isa/insts/m5ops.isa	Sun Feb 03 12:09:59 2019 -0600
+@@ -54,6 +54,49 @@
      uint64_t join32to64(uint32_t r1, uint32_t r0);
      '''
  
@@ -221,69 +223,137 @@ diff -r d649aeebdc34 src/arch/arm/isa/insts/m5ops.isa
 +    header_output += BasicDeclare.subst(memStatsIop)
 +    decoder_output += BasicConstructor.subst(memStatsIop)
 +    exec_output += PredOpExecute.subst(memStatsIop)
++
++    cacheStatsCode = '''
++    PseudoInst::dumpstats(xc->tcBase(), 0, 0);
++    uint64_t ip_val = PseudoInst::cache_stats(xc->tcBase(), join32to64(R1,R0), join32to64(R3,R2));
++    R0 = bits(ip_val, 31, 0);
++    R1 = bits(ip_val, 64, 31);
++    '''
++
++    cacheStatsCode64 = '''
++    PseudoInst::dumpstats(xc->tcBase(), 0, 0);
++    X0 = PseudoInst::cache_stats(xc->tcBase(), X0, X1);
++    '''
++
++    cacheStatsIop = InstObjParams("cache_stats", "CacheStats", "PredOp", {"code": cacheStatsCode, "predicate_test": predicateTest}, ["IsNonSpeculative"])
++    header_output += BasicDeclare.subst(cacheStatsIop)
++    decoder_output += BasicConstructor.subst(cachestatsIop)
++    exec_output += PredOpExecute.subst(cacheStatsIop)
++
++    cacheStatsIop = InstObjParams("cache_stats", "CacheStats64", "PredOp", { "code": cacheStatsCode64, "predicate_test": predicateTest }, ["IsNonSpeculative"])
++    header_output += BasicDeclare.subst(cacheStatsIop)
++    decoder_output += BasicConstructor.subst(cacheStatsIop)
++    exec_output += PredOpExecute.subst(cacheStatsIop)
  
      armCode = '''
      PseudoInst::arm(xc->tcBase());
+diff -r d649aeebdc34 src/mem/cache/base.hh
+--- a/src/mem/cache/base.hh	Mon Jan 28 14:15:10 2019 -0600
++++ b/src/mem/cache/base.hh	Sun Feb 03 12:09:59 2019 -0600
+@@ -456,6 +456,7 @@
+     /**
+      * @}
+      */
++    bool is_last_level;
+ 
+     /**
+      * Register stats for this object.
 diff -r d649aeebdc34 src/mem/cache/cache.cc
 --- a/src/mem/cache/cache.cc	Mon Jan 28 14:15:10 2019 -0600
-+++ b/src/mem/cache/cache.cc	Sun Feb 03 02:05:23 2019 -0600
-@@ -393,6 +393,8 @@
++++ b/src/mem/cache/cache.cc	Sun Feb 03 12:09:59 2019 -0600
+@@ -86,6 +86,11 @@
+     memSidePort = new MemSidePort(p->name + ".mem_side", this,
+                                   "MemSidePort");
+ 
++    is_last_level = false;
++    if(p->name.compare("l2") == 0) {
++      is_last_level = true;
++    }
++
+     tags->setCache(this);
+     if (prefetcher)
+         prefetcher->setCache(this);
+@@ -393,6 +398,10 @@
              if (blk == nullptr) {
                  // no replaceable block available: give up, fwd to next level.
                  incMissCount(pkt);
-+                cache_stats_miss_no++;
-+                cache_stats_total_no++;
++                if(is_last_level) {
++                  cache_stats_miss_no++;
++                  cache_stats_total_no++;
++                }
                  return false;
              }
              tags->insertBlock(pkt, blk);
-@@ -419,6 +421,8 @@
+@@ -419,6 +428,10 @@
          std::memcpy(blk->data, pkt->getConstPtr<uint8_t>(), blkSize);
          DPRINTF(Cache, "%s new state is %s\n", __func__, blk->print());
          incHitCount(pkt);
-+        cache_stats_hit_no++;
-+        cache_stats_total_no++;
++        if(is_last_level) {
++          cache_stats_hit_no++;
++          cache_stats_total_no++;
++        }
          // populate the time when the block will be ready to access.
          blk->whenReady = clockEdge(fillLatency) + pkt->headerDelay +
              pkt->payloadDelay;
-@@ -456,6 +460,8 @@
+@@ -456,6 +469,10 @@
                      // no replaceable block available: give up, fwd to
                      // next level.
                      incMissCount(pkt);
-+                    cache_stats_miss_no++;
-+                    cache_stats_total_no++;
++                    if(is_last_level) {
++                      cache_stats_miss_no++;
++                      cache_stats_total_no++;
++                    }
                      return false;
                  }
                  tags->insertBlock(pkt, blk);
-@@ -481,6 +487,8 @@
+@@ -481,6 +498,10 @@
          DPRINTF(Cache, "%s new state is %s\n", __func__, blk->print());
  
          incHitCount(pkt);
-+        cache_stats_hit_no++;
-+        cache_stats_total_no++;
++        if(is_last_level) {
++          cache_stats_hit_no++;
++          cache_stats_total_no++;
++        }
          // populate the time when the block will be ready to access.
          blk->whenReady = clockEdge(fillLatency) + pkt->headerDelay +
              pkt->payloadDelay;
-@@ -491,6 +499,8 @@
+@@ -491,6 +512,10 @@
                         blk->isReadable())) {
          // OK to satisfy access
          incHitCount(pkt);
-+        cache_stats_hit_no++;
-+        cache_stats_total_no++;
++        if(is_last_level) {
++          cache_stats_hit_no++;
++          cache_stats_total_no++;
++        }
          satisfyRequest(pkt, blk);
          maintainClusivity(pkt->fromCache(), blk);
  
-@@ -501,6 +511,8 @@
+@@ -501,6 +526,10 @@
      // or have block but need writable
  
      incMissCount(pkt);
-+    cache_stats_miss_no++;
-+    cache_stats_total_no++;
++    if(is_last_level) {
++      cache_stats_miss_no++;
++      cache_stats_total_no++;
++    }
  
      if (blk == nullptr && pkt->isLLSC() && pkt->isWrite()) {
          // complete miss on store conditional... just give up now
+diff -r d649aeebdc34 src/mem/cache/cache.hh
+--- a/src/mem/cache/cache.hh	Mon Jan 28 14:15:10 2019 -0600
++++ b/src/mem/cache/cache.hh	Sun Feb 03 12:09:59 2019 -0600
+@@ -62,6 +62,7 @@
+ #include "mem/cache/tags/base.hh"
+ #include "params/Cache.hh"
+ #include "sim/eventq.hh"
++#include "sim/full_system.hh"
+ 
+ //Forward decleration
+ class BasePrefetcher;
 diff -r d649aeebdc34 src/mem/dram_ctrl.cc
 --- a/src/mem/dram_ctrl.cc	Mon Jan 28 14:15:10 2019 -0600
-+++ b/src/mem/dram_ctrl.cc	Sun Feb 03 02:05:23 2019 -0600
++++ b/src/mem/dram_ctrl.cc	Sun Feb 03 12:09:59 2019 -0600
 @@ -616,6 +616,9 @@
              addToReadQueue(pkt, dram_pkt_count);
              readReqs++;
@@ -305,7 +375,7 @@ diff -r d649aeebdc34 src/mem/dram_ctrl.cc
  
 diff -r d649aeebdc34 src/mem/dram_ctrl.hh
 --- a/src/mem/dram_ctrl.hh	Mon Jan 28 14:15:10 2019 -0600
-+++ b/src/mem/dram_ctrl.hh	Sun Feb 03 02:05:23 2019 -0600
++++ b/src/mem/dram_ctrl.hh	Sun Feb 03 12:09:59 2019 -0600
 @@ -68,6 +68,7 @@
  #include "params/DRAMCtrl.hh"
  #include "sim/eventq.hh"
@@ -316,7 +386,7 @@ diff -r d649aeebdc34 src/mem/dram_ctrl.hh
   * The DRAM controller is a single-channel memory controller capturing
 diff -r d649aeebdc34 src/sim/full_system.hh
 --- a/src/sim/full_system.hh	Mon Jan 28 14:15:10 2019 -0600
-+++ b/src/sim/full_system.hh	Sun Feb 03 02:05:23 2019 -0600
++++ b/src/sim/full_system.hh	Sun Feb 03 12:09:59 2019 -0600
 @@ -45,4 +45,20 @@
   */
  extern unsigned int FullSystemInt;
@@ -340,8 +410,8 @@ diff -r d649aeebdc34 src/sim/full_system.hh
  #endif // __SIM_FULL_SYSTEM_HH__
 diff -r d649aeebdc34 src/sim/pseudo_inst.cc
 --- a/src/sim/pseudo_inst.cc	Mon Jan 28 14:15:10 2019 -0600
-+++ b/src/sim/pseudo_inst.cc	Sun Feb 03 02:05:23 2019 -0600
-@@ -164,6 +164,10 @@
++++ b/src/sim/pseudo_inst.cc	Sun Feb 03 12:09:59 2019 -0600
+@@ -164,6 +164,14 @@
          dumpresetstats(tc, args[0], args[1]);
          break;
  
@@ -349,10 +419,14 @@ diff -r d649aeebdc34 src/sim/pseudo_inst.cc
 +        return mem_stats(tc, args[0], args[1]);
 +        break;
 +
++      case M5OP_CACHE_STATS:
++        return cache_stats(tc, args[0], args[1]);
++        break;
++
        case M5OP_CHECKPOINT:
          m5checkpoint(tc, args[0], args[1]);
          break;
-@@ -198,7 +202,7 @@
+@@ -198,7 +206,7 @@
          break;
  
        case M5OP_ANNOTATE:
@@ -361,7 +435,7 @@ diff -r d649aeebdc34 src/sim/pseudo_inst.cc
        case M5OP_RESERVED3:
        case M5OP_RESERVED4:
        case M5OP_RESERVED5:
-@@ -474,6 +478,49 @@
+@@ -474,6 +482,90 @@
      Stats::schedStatEvent(true, true, when, repeat);
  }
  
@@ -378,7 +452,7 @@ diff -r d649aeebdc34 src/sim/pseudo_inst.cc
 +  char key_str[len];
 +  memset(key_str, '\0', len);
 +  if (key_str1 == 0) {
-+    assert(key_str2 == ​0​);  
++    assert(key_str2 == 0);  
 +  } else {
 +    strncpy(key_str, (char *)&key_str1, sizeof(uint64_t));
 +  }
@@ -405,7 +479,48 @@ diff -r d649aeebdc34 src/sim/pseudo_inst.cc
 +  }
 +
 +  return val;
++}
 +
++uint64_t
++cache_stats(ThreadContext *tc, uint64_t key_str1, uint64_t key_str2)
++{
++  DPRINTF(PseudoInst, "PseudoInst::cache_stats() key:%s%s\n", (char*)&key_str1, (char*)&key_str2);
++  if(!FullSystem) {
++    panicFsOnlyPseudoInst("cache_stats");
++    return 0;
++  }
++
++  const int len = 2 * sizeof(uint64_t) + 1;
++  char key_str[len];
++  memset(key_str, '\0', len);
++  if (key_str1 == 0) {
++    assert(key_str2 == 0);  
++  } else {
++    strncpy(key_str, (char *)&key_str1, sizeof(uint64_t));
++  }
++  if (strlen(key_str) == sizeof(uint64_t)) {
++    strncpy(key_str + sizeof(uint64_t), (char *)&key_str2, sizeof(uint64_t));
++  }
++  else {
++    assert(key_str2 == 0);
++  }
++
++  //Compare the key parameter with the known values to select the return value
++  uint64_t val;
++  if(strcmp(key_str, "miss") == 0) {
++    val = cache_stats_miss_no;
++  }
++  else if(strcmp(key_str, "hit") == 0) {
++    val = cache_stats_hit_no;
++  }
++  else if(strcmp(key_str, "total") == 0) {
++    val = cache_stats_total_no;
++  }
++  else {
++    panic("Unknown key for mem_stats pseudo instruction:\"%s\"", key_str);
++  }
++
++  return val;
 +}
 +
  void
@@ -413,18 +528,19 @@ diff -r d649aeebdc34 src/sim/pseudo_inst.cc
  {
 diff -r d649aeebdc34 src/sim/pseudo_inst.hh
 --- a/src/sim/pseudo_inst.hh	Mon Jan 28 14:15:10 2019 -0600
-+++ b/src/sim/pseudo_inst.hh	Sun Feb 03 02:05:23 2019 -0600
-@@ -83,6 +83,7 @@
++++ b/src/sim/pseudo_inst.hh	Sun Feb 03 12:09:59 2019 -0600
+@@ -83,6 +83,8 @@
  void resetstats(ThreadContext *tc, Tick delay, Tick period);
  void dumpstats(ThreadContext *tc, Tick delay, Tick period);
  void dumpresetstats(ThreadContext *tc, Tick delay, Tick period);
 +uint64_t mem_stats(ThreadContext *tc, uint64_t key_str1, uint64_t key_str2);
++uint64_t cache_stats(ThreadContext *tc, uint64_t key_str1, uint64_t key_str2);
  void m5checkpoint(ThreadContext *tc, Tick delay, Tick period);
  void debugbreak(ThreadContext *tc);
  void switchcpu(ThreadContext *tc);
 diff -r d649aeebdc34 src/sim/root.cc
 --- a/src/sim/root.cc	Mon Jan 28 14:15:10 2019 -0600
-+++ b/src/sim/root.cc	Sun Feb 03 02:05:23 2019 -0600
++++ b/src/sim/root.cc	Sun Feb 03 12:09:59 2019 -0600
 @@ -135,6 +135,12 @@
  
  bool FullSystem;
@@ -453,7 +569,7 @@ diff -r d649aeebdc34 src/sim/root.cc
  }
 diff -r d649aeebdc34 util/m5/m5.c
 --- a/util/m5/m5.c	Mon Jan 28 14:15:10 2019 -0600
-+++ b/util/m5/m5.c	Sun Feb 03 02:05:23 2019 -0600
++++ b/util/m5/m5.c	Sun Feb 03 12:09:59 2019 -0600
 @@ -212,6 +212,32 @@
  }
  
@@ -479,8 +595,8 @@ diff -r d649aeebdc34 util/m5/m5.c
 +  uint64_t key_str[2];
 +  parse_str_args_to_regs(argc, argv, key_str, 2);
 +  m5_dump_stats(0, 0);
-+  double val = m5_cache_stats(key_str[0], key_str[1]);
-+  printf("%lf", val);
++  uint64_t val = m5_cache_stats(key_str[0], key_str[1]);
++  printf("%"PRIu64, val);
 +}
 +
 +void
