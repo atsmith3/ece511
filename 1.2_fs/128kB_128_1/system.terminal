@@ -1,0 +1,54 @@
+init: tty main process ended, respawning
+Begin Mat Mul: 128 x 128 Tile: 1 x 1
+End Mat Mul: 128 x 128 Tile: 1 x 1
+usage: /sbin/m5 exit [delay]
+       /sbin/m5 fail <code> [delay]
+       /sbin/m5 resetstats [delay [period]]
+       /sbin/m5 dumpstats [delay [period]]
+       /sbin/m5 dumpresetstats [delay [period]]
+       /sbin/m5 mem_stats [key]
+       /sbin/m5 readfile 
+       /sbin/m5 writefile <filename> [host filename]
+       /sbin/m5 execfile 
+       /sbin/m5 checkpoint [delay [period]]
+       /sbin/m5 addsymbol <address> <symbol>
+       /sbin/m5 loadsymbol 
+       /sbin/m5 initparam [key] // key must be shorter than 16 chars
+       /sbin/m5 sw99param 
+       /sbin/m5 pin <cpu> <program> [args ...]
+
+All times in nanoseconds!
+usage: /sbin/m5 exit [delay]
+       /sbin/m5 fail <code> [delay]
+       /sbin/m5 resetstats [delay [period]]
+       /sbin/m5 dumpstats [delay [period]]
+       /sbin/m5 dumpresetstats [delay [period]]
+       /sbin/m5 mem_stats [key]
+       /sbin/m5 readfile 
+       /sbin/m5 writefile <filename> [host filename]
+       /sbin/m5 execfile 
+       /sbin/m5 checkpoint [delay [period]]
+       /sbin/m5 addsymbol <address> <symbol>
+       /sbin/m5 loadsymbol 
+       /sbin/m5 initparam [key] // key must be shorter than 16 chars
+       /sbin/m5 sw99param 
+       /sbin/m5 pin <cpu> <program> [args ...]
+
+All times in nanoseconds!
+usage: /sbin/m5 exit [delay]
+       /sbin/m5 fail <code> [delay]
+       /sbin/m5 resetstats [delay [period]]
+       /sbin/m5 dumpstats [delay [period]]
+       /sbin/m5 dumpresetstats [delay [period]]
+       /sbin/m5 mem_stats [key]
+       /sbin/m5 readfile 
+       /sbin/m5 writefile <filename> [host filename]
+       /sbin/m5 execfile 
+       /sbin/m5 checkpoint [delay [period]]
+       /sbin/m5 addsymbol <address> <symbol>
+       /sbin/m5 loadsymbol 
+       /sbin/m5 initparam [key] // key must be shorter than 16 chars
+       /sbin/m5 sw99param 
+       /sbin/m5 pin <cpu> <program> [args ...]
+
+All times in nanoseconds!
