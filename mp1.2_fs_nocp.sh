@@ -13,15 +13,14 @@ KERNEL='benchmarks/FSmode/binaries/vmlinux.aarch32.ll_20131205.0-gem5'
 DTB='benchmarks/FSmode/binaries/vexpress.aarch32.ll_20131205.0-gem5.1cpu.dtb'
 CHKPT_DIR='checkpoint'
 
-for i in "${CACHE_SIZES[@]}"
-do
+for i in "${CACHE_SIZES[@]}"; do
 $GEM5_BUILD -d $OUTPUT_DIR/$i $CONFIG_FILE \
   --machine-type=VExpress_EMM \
   --disk-image=$GEM5_DIR/$IMAGE \
   --kernel=$GEM5_DIR/$KERNEL \
   --dtb-filename=$GEM5_DIR/$DTB \
-  --restore-with-cpu=TimingSimpleCPU \
+  --cpu-type=TimingSimpleCPU \
   --num-cpus=2 --caches --l2cache --l2_size=$i \
-  --script=$GEM5_DIR/$RCS_SCRIPT \
-  --checkpoint-dir=$GEM5_DIR/$OUTPUT_DIR/$CHKPT_DIR -r 1 &
+  --script=$GEM5_DIR/$RCS_SCRIPT &;
 done
+#  --checkpoint-dir=$GEM5_DIR/$OUTPUT_DIR/$CHKPT_DIR -r 1 &
