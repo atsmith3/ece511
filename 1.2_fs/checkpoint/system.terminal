@@ -200,9 +200,9 @@ ALSA device list:
 input: touchkitPS/2 eGalax Touchscreen as /devices/smb.14/motherboard.15/iofpga.17/1c070000.kmi/serio1/input/input2
 kjournald starting.  Commit interval 5 seconds
 EXT3-fs (sda1): using internal journal
-EXT3-fs (sda1): recovery complete
 EXT3-fs (sda1): mounted filesystem with writeback data mode
 VFS: Mounted root (ext3 filesystem) on device 8:1.
 Freeing unused kernel memory: 292K (806aa000 - 806f3000)
-random: init urandom read with 17 bits of entropy available
+random: init urandom read with 14 bits of entropy available
  init: tty main process ended, respawning
+init: tty main process ended, respawning
