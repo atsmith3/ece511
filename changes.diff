@@ -1,6 +1,6 @@
 diff -r d649aeebdc34 configs/common/CacheConfig.py
 --- a/configs/common/CacheConfig.py	Mon Jan 28 14:15:10 2019 -0600
-+++ b/configs/common/CacheConfig.py	Sun Feb 03 12:09:59 2019 -0600
++++ b/configs/common/CacheConfig.py	Tue Feb 05 02:47:41 2019 -0600
 @@ -62,12 +62,12 @@
              print("O3_ARM_v7a_3 is unavailable. Did you compile the O3 model?")
              sys.exit(1)
@@ -89,7 +89,7 @@ diff -r d649aeebdc34 configs/common/CacheConfig.py
          else:
 diff -r d649aeebdc34 configs/common/Caches.py
 --- a/configs/common/Caches.py	Mon Jan 28 14:15:10 2019 -0600
-+++ b/configs/common/Caches.py	Sun Feb 03 12:09:59 2019 -0600
++++ b/configs/common/Caches.py	Tue Feb 05 02:47:41 2019 -0600
 @@ -72,6 +72,15 @@
      tgts_per_mshr = 12
      write_buffers = 8
@@ -108,7 +108,7 @@ diff -r d649aeebdc34 configs/common/Caches.py
      tag_latency = 50
 diff -r d649aeebdc34 configs/common/Options.py
 --- a/configs/common/Options.py	Mon Jan 28 14:15:10 2019 -0600
-+++ b/configs/common/Options.py	Sun Feb 03 12:09:59 2019 -0600
++++ b/configs/common/Options.py	Tue Feb 05 02:47:41 2019 -0600
 @@ -98,9 +98,10 @@
                        help="use external port for SystemC TLM cosimulation")
      parser.add_option("--caches", action="store_true")
@@ -124,7 +124,7 @@ diff -r d649aeebdc34 configs/common/Options.py
      parser.add_option("--l2_size", type="string", default="2MB")
 diff -r d649aeebdc34 configs/common/SysPaths.py
 --- a/configs/common/SysPaths.py	Mon Jan 28 14:15:10 2019 -0600
-+++ b/configs/common/SysPaths.py	Sun Feb 03 12:09:59 2019 -0600
++++ b/configs/common/SysPaths.py	Tue Feb 05 02:47:41 2019 -0600
 @@ -32,7 +32,7 @@
  config_root = os.path.dirname(config_path)
  
@@ -136,7 +136,7 @@ diff -r d649aeebdc34 configs/common/SysPaths.py
          if isinstance(subdirs, basestring):
 diff -r d649aeebdc34 include/gem5/asm/generic/m5ops.h
 --- a/include/gem5/asm/generic/m5ops.h	Mon Jan 28 14:15:10 2019 -0600
-+++ b/include/gem5/asm/generic/m5ops.h	Sun Feb 03 12:09:59 2019 -0600
++++ b/include/gem5/asm/generic/m5ops.h	Tue Feb 05 02:47:41 2019 -0600
 @@ -72,8 +72,10 @@
  #define M5OP_ADD_SYMBOL         0x53
  #define M5OP_PANIC              0x54
@@ -146,7 +146,7 @@ diff -r d649aeebdc34 include/gem5/asm/generic/m5ops.h
 +//#define M5OP_RESERVED2          0x56 // Reserved for user
 +//#define M5OP_RESERVED3          0x57 // Reserved for user
 +#define M5OP_MEM_STATS          0x56 // Reserved for user
-+#define M5OP_CACHE_STATS          0x57 // Reserved for user
++#define M5OP_CACHE_STATS        0x57 // Reserved for user
  #define M5OP_RESERVED4          0x58 // Reserved for user
  #define M5OP_RESERVED5          0x59 // Reserved for user
  
@@ -161,7 +161,7 @@ diff -r d649aeebdc34 include/gem5/asm/generic/m5ops.h
      M5OP(m5_write_file, M5OP_WRITE_FILE, 0);                    \
 diff -r d649aeebdc34 include/gem5/m5ops.h
 --- a/include/gem5/m5ops.h	Mon Jan 28 14:15:10 2019 -0600
-+++ b/include/gem5/m5ops.h	Sun Feb 03 12:09:59 2019 -0600
++++ b/include/gem5/m5ops.h	Tue Feb 05 02:47:41 2019 -0600
 @@ -55,6 +55,8 @@
  void m5_reset_stats(uint64_t ns_delay, uint64_t ns_period);
  void m5_dump_stats(uint64_t ns_delay, uint64_t ns_period);
@@ -173,7 +173,7 @@ diff -r d649aeebdc34 include/gem5/m5ops.h
                         const char *filename);
 diff -r d649aeebdc34 src/arch/arm/isa/formats/aarch64.isa
 --- a/src/arch/arm/isa/formats/aarch64.isa	Mon Jan 28 14:15:10 2019 -0600
-+++ b/src/arch/arm/isa/formats/aarch64.isa	Sun Feb 03 12:09:59 2019 -0600
++++ b/src/arch/arm/isa/formats/aarch64.isa	Tue Feb 05 02:47:41 2019 -0600
 @@ -2116,6 +2116,8 @@
            case M5OP_SWITCH_CPU: return new M5switchcpu(machInst);
            case M5OP_ADD_SYMBOL: return new M5addsymbol64(machInst);
@@ -185,7 +185,7 @@ diff -r d649aeebdc34 src/arch/arm/isa/formats/aarch64.isa
            default: return new Unknown64(machInst);
 diff -r d649aeebdc34 src/arch/arm/isa/formats/m5ops.isa
 --- a/src/arch/arm/isa/formats/m5ops.isa	Mon Jan 28 14:15:10 2019 -0600
-+++ b/src/arch/arm/isa/formats/m5ops.isa	Sun Feb 03 12:09:59 2019 -0600
++++ b/src/arch/arm/isa/formats/m5ops.isa	Tue Feb 05 02:47:41 2019 -0600
 @@ -66,6 +66,8 @@
              case M5OP_SWITCH_CPU: return new M5switchcpu(machInst);
              case M5OP_ADD_SYMBOL: return new M5addsymbol(machInst);
@@ -197,7 +197,7 @@ diff -r d649aeebdc34 src/arch/arm/isa/formats/m5ops.isa
              default: return new Unknown(machInst);
 diff -r d649aeebdc34 src/arch/arm/isa/insts/m5ops.isa
 --- a/src/arch/arm/isa/insts/m5ops.isa	Mon Jan 28 14:15:10 2019 -0600
-+++ b/src/arch/arm/isa/insts/m5ops.isa	Sun Feb 03 12:09:59 2019 -0600
++++ b/src/arch/arm/isa/insts/m5ops.isa	Tue Feb 05 02:47:41 2019 -0600
 @@ -54,6 +54,49 @@
      uint64_t join32to64(uint32_t r1, uint32_t r0);
      '''
@@ -238,7 +238,7 @@ diff -r d649aeebdc34 src/arch/arm/isa/insts/m5ops.isa
 +
 +    cacheStatsIop = InstObjParams("cache_stats", "CacheStats", "PredOp", {"code": cacheStatsCode, "predicate_test": predicateTest}, ["IsNonSpeculative"])
 +    header_output += BasicDeclare.subst(cacheStatsIop)
-+    decoder_output += BasicConstructor.subst(cachestatsIop)
++    decoder_output += BasicConstructor.subst(cacheStatsIop)
 +    exec_output += PredOpExecute.subst(cacheStatsIop)
 +
 +    cacheStatsIop = InstObjParams("cache_stats", "CacheStats64", "PredOp", { "code": cacheStatsCode64, "predicate_test": predicateTest }, ["IsNonSpeculative"])
@@ -250,7 +250,7 @@ diff -r d649aeebdc34 src/arch/arm/isa/insts/m5ops.isa
      PseudoInst::arm(xc->tcBase());
 diff -r d649aeebdc34 src/mem/cache/base.hh
 --- a/src/mem/cache/base.hh	Mon Jan 28 14:15:10 2019 -0600
-+++ b/src/mem/cache/base.hh	Sun Feb 03 12:09:59 2019 -0600
++++ b/src/mem/cache/base.hh	Tue Feb 05 02:47:41 2019 -0600
 @@ -456,6 +456,7 @@
      /**
       * @}
@@ -261,7 +261,7 @@ diff -r d649aeebdc34 src/mem/cache/base.hh
       * Register stats for this object.
 diff -r d649aeebdc34 src/mem/cache/cache.cc
 --- a/src/mem/cache/cache.cc	Mon Jan 28 14:15:10 2019 -0600
-+++ b/src/mem/cache/cache.cc	Sun Feb 03 12:09:59 2019 -0600
++++ b/src/mem/cache/cache.cc	Tue Feb 05 02:47:41 2019 -0600
 @@ -86,6 +86,11 @@
      memSidePort = new MemSidePort(p->name + ".mem_side", this,
                                    "MemSidePort");
@@ -342,7 +342,7 @@ diff -r d649aeebdc34 src/mem/cache/cache.cc
          // complete miss on store conditional... just give up now
 diff -r d649aeebdc34 src/mem/cache/cache.hh
 --- a/src/mem/cache/cache.hh	Mon Jan 28 14:15:10 2019 -0600
-+++ b/src/mem/cache/cache.hh	Sun Feb 03 12:09:59 2019 -0600
++++ b/src/mem/cache/cache.hh	Tue Feb 05 02:47:41 2019 -0600
 @@ -62,6 +62,7 @@
  #include "mem/cache/tags/base.hh"
  #include "params/Cache.hh"
@@ -353,7 +353,7 @@ diff -r d649aeebdc34 src/mem/cache/cache.hh
  class BasePrefetcher;
 diff -r d649aeebdc34 src/mem/dram_ctrl.cc
 --- a/src/mem/dram_ctrl.cc	Mon Jan 28 14:15:10 2019 -0600
-+++ b/src/mem/dram_ctrl.cc	Sun Feb 03 12:09:59 2019 -0600
++++ b/src/mem/dram_ctrl.cc	Tue Feb 05 02:47:41 2019 -0600
 @@ -616,6 +616,9 @@
              addToReadQueue(pkt, dram_pkt_count);
              readReqs++;
@@ -375,7 +375,7 @@ diff -r d649aeebdc34 src/mem/dram_ctrl.cc
  
 diff -r d649aeebdc34 src/mem/dram_ctrl.hh
 --- a/src/mem/dram_ctrl.hh	Mon Jan 28 14:15:10 2019 -0600
-+++ b/src/mem/dram_ctrl.hh	Sun Feb 03 12:09:59 2019 -0600
++++ b/src/mem/dram_ctrl.hh	Tue Feb 05 02:47:41 2019 -0600
 @@ -68,6 +68,7 @@
  #include "params/DRAMCtrl.hh"
  #include "sim/eventq.hh"
@@ -386,7 +386,7 @@ diff -r d649aeebdc34 src/mem/dram_ctrl.hh
   * The DRAM controller is a single-channel memory controller capturing
 diff -r d649aeebdc34 src/sim/full_system.hh
 --- a/src/sim/full_system.hh	Mon Jan 28 14:15:10 2019 -0600
-+++ b/src/sim/full_system.hh	Sun Feb 03 12:09:59 2019 -0600
++++ b/src/sim/full_system.hh	Tue Feb 05 02:47:41 2019 -0600
 @@ -45,4 +45,20 @@
   */
  extern unsigned int FullSystemInt;
@@ -410,7 +410,7 @@ diff -r d649aeebdc34 src/sim/full_system.hh
  #endif // __SIM_FULL_SYSTEM_HH__
 diff -r d649aeebdc34 src/sim/pseudo_inst.cc
 --- a/src/sim/pseudo_inst.cc	Mon Jan 28 14:15:10 2019 -0600
-+++ b/src/sim/pseudo_inst.cc	Sun Feb 03 12:09:59 2019 -0600
++++ b/src/sim/pseudo_inst.cc	Tue Feb 05 02:47:41 2019 -0600
 @@ -164,6 +164,14 @@
          dumpresetstats(tc, args[0], args[1]);
          break;
@@ -426,16 +426,29 @@ diff -r d649aeebdc34 src/sim/pseudo_inst.cc
        case M5OP_CHECKPOINT:
          m5checkpoint(tc, args[0], args[1]);
          break;
-@@ -198,7 +206,7 @@
+@@ -198,8 +206,8 @@
          break;
  
        case M5OP_ANNOTATE:
 -      case M5OP_RESERVED2:
+-      case M5OP_RESERVED3:
 +//      case M5OP_RESERVED2:
-       case M5OP_RESERVED3:
++//      case M5OP_RESERVED3:
        case M5OP_RESERVED4:
        case M5OP_RESERVED5:
-@@ -474,6 +482,90 @@
+         warn("Unimplemented m5 op (0x%x)\n", func);
+@@ -439,6 +447,10 @@
+     if (!tc->getCpuPtr()->params()->do_statistics_insts)
+         return;
+ 
++    cache_stats_miss_no = 0;
++    cache_stats_hit_no = 0;
++    cache_stats_total_no = 0;
++
+ 
+     Tick when = curTick() + delay * SimClock::Int::ns;
+     Tick repeat = period * SimClock::Int::ns;
+@@ -474,6 +486,90 @@
      Stats::schedStatEvent(true, true, when, repeat);
  }
  
@@ -528,7 +541,7 @@ diff -r d649aeebdc34 src/sim/pseudo_inst.cc
  {
 diff -r d649aeebdc34 src/sim/pseudo_inst.hh
 --- a/src/sim/pseudo_inst.hh	Mon Jan 28 14:15:10 2019 -0600
-+++ b/src/sim/pseudo_inst.hh	Sun Feb 03 12:09:59 2019 -0600
++++ b/src/sim/pseudo_inst.hh	Tue Feb 05 02:47:41 2019 -0600
 @@ -83,6 +83,8 @@
  void resetstats(ThreadContext *tc, Tick delay, Tick period);
  void dumpstats(ThreadContext *tc, Tick delay, Tick period);
@@ -540,7 +553,7 @@ diff -r d649aeebdc34 src/sim/pseudo_inst.hh
  void switchcpu(ThreadContext *tc);
 diff -r d649aeebdc34 src/sim/root.cc
 --- a/src/sim/root.cc	Mon Jan 28 14:15:10 2019 -0600
-+++ b/src/sim/root.cc	Sun Feb 03 12:09:59 2019 -0600
++++ b/src/sim/root.cc	Tue Feb 05 02:47:41 2019 -0600
 @@ -135,6 +135,12 @@
  
  bool FullSystem;
@@ -569,8 +582,8 @@ diff -r d649aeebdc34 src/sim/root.cc
  }
 diff -r d649aeebdc34 util/m5/m5.c
 --- a/util/m5/m5.c	Mon Jan 28 14:15:10 2019 -0600
-+++ b/util/m5/m5.c	Sun Feb 03 12:09:59 2019 -0600
-@@ -212,6 +212,32 @@
++++ b/util/m5/m5.c	Tue Feb 05 02:47:41 2019 -0600
+@@ -212,6 +212,31 @@
  }
  
  void
@@ -594,16 +607,15 @@ diff -r d649aeebdc34 util/m5/m5.c
 +
 +  uint64_t key_str[2];
 +  parse_str_args_to_regs(argc, argv, key_str, 2);
-+  m5_dump_stats(0, 0);
 +  uint64_t val = m5_cache_stats(key_str[0], key_str[1]);
-+  printf("%"PRIu64, val);
++  printf("llc %s: %llu\n", argv[0], val);
 +}
 +
 +void
  do_read_file(int argc, char *argv[])
  {
      if (argc > 0)
-@@ -343,6 +369,8 @@
+@@ -343,6 +368,8 @@
      { "resetstats",     do_reset_stats,      "[delay [period]]" },
      { "dumpstats",      do_dump_stats,       "[delay [period]]" },
      { "dumpresetstats", do_dump_reset_stats, "[delay [period]]" },
