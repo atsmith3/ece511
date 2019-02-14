@@ -1,0 +1,18 @@
+gem5 Simulator System.  http://gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 compiled Feb 14 2019 03:04:38
+gem5 started Feb 14 2019 05:31:07
+gem5 executing on dev, pid 23422
+command line: /home/andrew/ece511/gem5/build/ARM/gem5.fast --outdir=mp2_data/BiModeBP_libquantum_2048_1024 /home/andrew/ece511/gem5/configs/example/se.py --cmd=/home/andrew/ece511/libquantum/libquantum_base.arm '--options=33 5' --num-cpus=1 --cpu-type=O3_ARM_v7a_3 --bp_type=BiModeBP --global_pred_size=1024 --choice_pred_size=2048 --l1i_size=16kB --l1d_size=64kB --l2cache --l2_size=256kB --caches
+
+info: Standard input is not a terminal, disabling listeners.
+Global frequency set at 1000000000000 ticks per second
+**** REAL SIMULATION ****
+N = 33, 31 qubits required
+Random seed: 5
+Measured 819 (0.399902), fractional approximation is 2/5.
+Odd denominator, trying to expand by 2.
+Possible period is 10.
+33 = 11 * 3
+Exiting @ tick 106297981500 because exiting with last active thread context

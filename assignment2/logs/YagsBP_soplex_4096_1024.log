@@ -1,0 +1,28 @@
+gem5 Simulator System.  http://gem5.org
+gem5 is copyrighted software; use the --copyright option for details.
+
+gem5 compiled Feb 14 2019 03:04:38
+gem5 started Feb 14 2019 05:31:07
+gem5 executing on dev, pid 23435
+command line: /home/andrew/ece511/gem5/build/ARM/gem5.fast --outdir=mp2_data/YagsBP_soplex_4096_1024 /home/andrew/ece511/gem5/configs/example/se.py --cmd=/home/andrew/ece511/soplex/soplex_base.arm '--options=-m10000 /home/andrew/ece511/soplex/test.mps' --num-cpus=1 --cpu-type=O3_ARM_v7a_3 --bp_type=YagsBP --global_pred_size=1024 --choice_pred_size=4096 --l1i_size=16kB --l1d_size=64kB --l2cache --l2_size=256kB --caches
+
+Global frequency set at 1000000000000 ticks per second
+**** REAL SIMULATION ****
+Delta   =     1.000000e-06
+Epsilon =     1.000000e-17
+Entering algorithm
+Column representation
+Forest-Tomlin update
+Steep pricing
+Fast ratiotest
+No scaling
+No simplifier
+Weight starter
+loading LP file /home/andrew/ece511/soplex/test.mps
+LP has 497	rows and
+       614	columns
+solving LP
+Finished solving (status=1, objValue=1.727911e+05)
+solution value is: 1.7279107e+05
+
+Exiting @ tick 81032692500 because exiting with last active thread context
