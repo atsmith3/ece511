@@ -1,7 +1,7 @@
-diff -r 40c18bb90501 -r b15553413a9d configs/common/Options.py
+diff -r 40c18bb90501 -r 1b70c54bee45 configs/common/Options.py
 --- a/configs/common/Options.py	Fri Mar 23 10:34:02 2018 -0700
-+++ b/configs/common/Options.py	Thu Feb 14 03:29:53 2019 -0600
-@@ -131,6 +131,27 @@
++++ b/configs/common/Options.py	Thu Feb 14 05:02:48 2019 -0600
+@@ -131,6 +131,28 @@
      # start by adding the base options that do not assume an ISA
      addNoISAOptions(parser)
  
@@ -9,29 +9,30 @@ diff -r 40c18bb90501 -r b15553413a9d configs/common/Options.py
 +    parser.add_option("--bp_type", type="string", default="None", help="Type of branch predictor: 'None' 'BiModeBP' 'TournamentBP' 'LocalBP' 'LTAGE' 'GShareBP' 'YagsBP' 'PerceptronBP'")
 +    # -- GShareBP --
 +    parser.add_option("--pht_pred_size", type="int", default="8192", help="Entries in GShareBP Pattern History Table (PHT)")
-+    parser.add_option("--pht_ctrl_bits", type="int", default="2", help="Bits of Pattern History Table (PHT) predictors")
++    parser.add_option("--pht_ctr_bits", type="int", default="2", help="Bits of Pattern History Table (PHT) predictors")
 +    # -- LocalBP --
 +    parser.add_option("--local_pred_size", type="int", default="2048", help="Size of Local Predictor")
-+    parser.add_option("--local_ctrl_bits", type="int", default="2", help="Bits per counter")
++    parser.add_option("--local_ctr_bits", type="int", default="2", help="Bits per counter")
 +    # -- TournamentBP --
 +    parser.add_option("--local_hist_size", type="int", default="2048", help="Size of Local History Table")
 +    # -- BiModalBP --
 +    parser.add_option("--global_pred_size", type="int", default="8192", help="Size of Global Predictor")
-+    parser.add_option("--global_ctrl_bits", type="int", default="2", help="Bits per Global counter")
++    parser.add_option("--global_ctr_bits", type="int", default="2", help="Bits per Global counter")
 +    parser.add_option("--choice_pred_size", type="int", default="8192", help="Size of Choice Predictor")
-+    parser.add_option("--choice_ctrl_bits", type="int", default="2", help="Bits per Choice counter")
++    parser.add_option("--choice_ctr_bits", type="int", default="2", help="Bits per Choice counter")
 +    # -- YagsBP --
-+    # -- PerceptronBP ==
-+
-+    
++    parser.add_option("--tag_mask", type="int", default="2", help="Bit width of the t/nt cache tag")
++    # -- PerceptronBP --
++    parser.add_option("--perceptron_table_size", type="int", default="2048", help="Size of perceptron table")
++    parser.add_option("--hist_reg_bits", type="int", default="12", help="History Register Width")
 +
 +
      # system options
      parser.add_option("--list-cpu-types",
                        action="callback", callback=_listCpuTypes,
-diff -r 40c18bb90501 -r b15553413a9d configs/common/SysPaths.py
+diff -r 40c18bb90501 -r 1b70c54bee45 configs/common/SysPaths.py
 --- a/configs/common/SysPaths.py	Fri Mar 23 10:34:02 2018 -0700
-+++ b/configs/common/SysPaths.py	Thu Feb 14 03:29:53 2019 -0600
++++ b/configs/common/SysPaths.py	Thu Feb 14 05:02:48 2019 -0600
 @@ -32,7 +32,7 @@
  config_root = os.path.dirname(config_path)
  
@@ -41,9 +42,9 @@ diff -r 40c18bb90501 -r b15553413a9d configs/common/SysPaths.py
  
      def __init__(self, subdirs, sys_paths=None):
          if isinstance(subdirs, basestring):
-diff -r 40c18bb90501 -r b15553413a9d configs/example/se.py
+diff -r 40c18bb90501 -r 1b70c54bee45 configs/example/se.py
 --- a/configs/example/se.py	Fri Mar 23 10:34:02 2018 -0700
-+++ b/configs/example/se.py	Thu Feb 14 03:29:53 2019 -0600
++++ b/configs/example/se.py	Thu Feb 14 05:02:48 2019 -0600
 @@ -64,6 +64,7 @@
  from common import MemConfig
  from common.Caches import *
@@ -52,34 +53,60 @@ diff -r 40c18bb90501 -r b15553413a9d configs/example/se.py
  
  # Check if KVM support has been enabled, we might need to do VM
  # configuration if that's the case.
-@@ -171,6 +172,26 @@
+@@ -171,6 +172,52 @@
  
  (CPUClass, test_mem_mode, FutureClass) = Simulation.setCPUClass(options)
  CPUClass.numThreads = numThreads
 +# Configure Branch Predictor
-+#if options.bp_type == "None" :
++if options.bp_type == "None" :
++  CPUClass.branchPred = None
 +
 +if options.bp_type == "LocalBP" :
 +  CPUClass.branchPred = LocalBP()
++  CPUClass.branchPred.localPredictorSize = options.local_pred_size
++  CPUClass.branchPred.localCtrBits = options.local_ctr_bits
 +
 +if options.bp_type == "TournamentBP" :
 +  CPUClass.branchPred = TournamentBP()
++  CPUClass.branchPred.localPredictorSize = options.local_pred_size
++  CPUClass.branchPred.localCtrBits = options.local_ctr_bits
++  CPUClass.branchPred.localHistoryTableSize = options.local_hist_size
++  CPUClass.branchPred.globalPredictorSize = options.global_pred_size
++  CPUClass.branchPred.globalCtrBits = options.global_ctr_bits
++  CPUClass.branchPred.choicePredictorSize = options.choice_pred_size
++  CPUClass.branchPred.choiceCtrBits = options.choice_ctr_bits
 +
 +if options.bp_type == "BiModeBP" :
 +  CPUClass.branchPred = BiModeBP()
++  CPUClass.branchPred.globalPredictorSize = options.global_pred_size
++  CPUClass.branchPred.globalCtrBits = options.global_ctr_bits
++  CPUClass.branchPred.choicePredictorSize = options.choice_pred_size
++  CPUClass.branchPred.choiceCtrBits = options.choice_ctr_bits
 +
 +if options.bp_type == "GShareBP" :
 +  CPUClass.branchPred = GShareBP()
++  CPUClass.branchPred.phtPredictorSize = options.pht_pred_size
++  CPUClass.branchPred.phtCtrBits = options.pht_ctr_bits
 +
 +if options.bp_type == "YagsBP" :
 +  CPUClass.branchPred = YagsBP()
++  CPUClass.branchPred.globalPredictorSize = options.global_pred_size
++  CPUClass.branchPred.globalCtrBits = options.global_ctr_bits
++  CPUClass.branchPred.choicePredictorSize = options.choice_pred_size
++  CPUClass.branchPred.choiceCtrBits = options.choice_ctr_bits
++  CPUClass.branchPred.tagMask = options.tag_mask
 +
 +if options.bp_type == "PerceptronBP" :
 +  CPUClass.branchPred = PerceptronBP()
++  CPUClass.branchPred.perceptronTableSize = options.perceptron_table_size
++  CPUClass.branchPred.historyRegisterBits = options.hist_reg_bits
++
++if options.bp_type == "LTAGE" :
++  CPUClass.branchPred = LTAGE()
  
  # Check -- do not allow SMT with multiple CPUs
  if options.smt and options.num_cpus > 1:
-@@ -182,6 +203,9 @@
+@@ -182,6 +229,9 @@
                  mem_ranges = [AddrRange(options.mem_size)],
                  cache_line_size = options.cacheline_size)
  
@@ -89,9 +116,9 @@ diff -r 40c18bb90501 -r b15553413a9d configs/example/se.py
  if numThreads > 1:
      system.multi_thread = True
  
-diff -r 40c18bb90501 -r b15553413a9d src/arch/arm/linux/process.cc
+diff -r 40c18bb90501 -r 1b70c54bee45 src/arch/arm/linux/process.cc
 --- a/src/arch/arm/linux/process.cc	Fri Mar 23 10:34:02 2018 -0700
-+++ b/src/arch/arm/linux/process.cc	Thu Feb 14 03:29:53 2019 -0600
++++ b/src/arch/arm/linux/process.cc	Thu Feb 14 05:02:48 2019 -0600
 @@ -69,7 +69,7 @@
  
      strcpy(name->sysname, "Linux");
@@ -101,9 +128,9 @@ diff -r 40c18bb90501 -r b15553413a9d src/arch/arm/linux/process.cc
      strcpy(name->version, "#1 Mon Aug 18 11:32:15 EDT 2003");
      strcpy(name->machine, "armv7l");
  
-diff -r 40c18bb90501 -r b15553413a9d src/cpu/pred/BranchPredictor.py
+diff -r 40c18bb90501 -r 1b70c54bee45 src/cpu/pred/BranchPredictor.py
 --- a/src/cpu/pred/BranchPredictor.py	Fri Mar 23 10:34:02 2018 -0700
-+++ b/src/cpu/pred/BranchPredictor.py	Thu Feb 14 03:29:53 2019 -0600
++++ b/src/cpu/pred/BranchPredictor.py	Thu Feb 14 05:02:48 2019 -0600
 @@ -86,6 +86,33 @@
      choicePredictorSize = Param.Unsigned(8192, "Size of choice predictor")
      choiceCtrBits = Param.Unsigned(2, "Bits of choice counters")
@@ -138,9 +165,9 @@ diff -r 40c18bb90501 -r b15553413a9d src/cpu/pred/BranchPredictor.py
  class LTAGE(BranchPredictor):
      type = 'LTAGE'
      cxx_class = 'LTAGE'
-diff -r 40c18bb90501 -r b15553413a9d src/cpu/pred/SConscript
+diff -r 40c18bb90501 -r 1b70c54bee45 src/cpu/pred/SConscript
 --- a/src/cpu/pred/SConscript	Fri Mar 23 10:34:02 2018 -0700
-+++ b/src/cpu/pred/SConscript	Thu Feb 14 03:29:53 2019 -0600
++++ b/src/cpu/pred/SConscript	Thu Feb 14 05:02:48 2019 -0600
 @@ -42,7 +42,10 @@
  Source('indirect.cc')
  Source('ras.cc')
@@ -153,9 +180,9 @@ diff -r 40c18bb90501 -r b15553413a9d src/cpu/pred/SConscript
  Source('ltage.cc')
  DebugFlag('FreeList')
  DebugFlag('Branch')
-diff -r 40c18bb90501 -r b15553413a9d src/cpu/pred/gshare.cc
+diff -r 40c18bb90501 -r 1b70c54bee45 src/cpu/pred/gshare.cc
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/src/cpu/pred/gshare.cc	Thu Feb 14 03:29:53 2019 -0600
++++ b/src/cpu/pred/gshare.cc	Thu Feb 14 05:02:48 2019 -0600
 @@ -0,0 +1,162 @@
 +
 +/* @file
@@ -319,9 +346,9 @@ diff -r 40c18bb90501 -r b15553413a9d src/cpu/pred/gshare.cc
 +{
 +    return new GShareBP(this);
 +}
-diff -r 40c18bb90501 -r b15553413a9d src/cpu/pred/gshare.hh
+diff -r 40c18bb90501 -r 1b70c54bee45 src/cpu/pred/gshare.hh
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/src/cpu/pred/gshare.hh	Thu Feb 14 03:29:53 2019 -0600
++++ b/src/cpu/pred/gshare.hh	Thu Feb 14 05:02:48 2019 -0600
 @@ -0,0 +1,50 @@
 +/* @file
 + * Implementation of a GShare branch predictor
@@ -373,9 +400,9 @@ diff -r 40c18bb90501 -r b15553413a9d src/cpu/pred/gshare.hh
 +};
 +
 +#endif // __CPU_PRED_GSHARE_PRED_HH__
-diff -r 40c18bb90501 -r b15553413a9d src/cpu/pred/perceptron.cc
+diff -r 40c18bb90501 -r 1b70c54bee45 src/cpu/pred/perceptron.cc
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/src/cpu/pred/perceptron.cc	Thu Feb 14 03:29:53 2019 -0600
++++ b/src/cpu/pred/perceptron.cc	Thu Feb 14 05:02:48 2019 -0600
 @@ -0,0 +1,169 @@
 +
 +/* @file
@@ -546,9 +573,9 @@ diff -r 40c18bb90501 -r b15553413a9d src/cpu/pred/perceptron.cc
 +{
 +    return new PerceptronBP(this);
 +}
-diff -r 40c18bb90501 -r b15553413a9d src/cpu/pred/perceptron.hh
+diff -r 40c18bb90501 -r 1b70c54bee45 src/cpu/pred/perceptron.hh
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/src/cpu/pred/perceptron.hh	Thu Feb 14 03:29:53 2019 -0600
++++ b/src/cpu/pred/perceptron.hh	Thu Feb 14 05:02:48 2019 -0600
 @@ -0,0 +1,50 @@
 +/* @file
 + * Implementation of a Perceptron branch predictor
@@ -600,9 +627,9 @@ diff -r 40c18bb90501 -r b15553413a9d src/cpu/pred/perceptron.hh
 +};
 +
 +#endif // __CPU_PRED_PERCEPTRON_PRED_HH__
-diff -r 40c18bb90501 -r b15553413a9d src/cpu/pred/yags.cc
+diff -r 40c18bb90501 -r 1b70c54bee45 src/cpu/pred/yags.cc
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/src/cpu/pred/yags.cc	Thu Feb 14 03:29:53 2019 -0600
++++ b/src/cpu/pred/yags.cc	Thu Feb 14 05:02:48 2019 -0600
 @@ -0,0 +1,252 @@
 +/* @file
 + * Implementation of a yags branch predictor
@@ -856,9 +883,9 @@ diff -r 40c18bb90501 -r b15553413a9d src/cpu/pred/yags.cc
 +{
 +    return new YagsBP(this);
 +}
-diff -r 40c18bb90501 -r b15553413a9d src/cpu/pred/yags.hh
+diff -r 40c18bb90501 -r 1b70c54bee45 src/cpu/pred/yags.hh
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/src/cpu/pred/yags.hh	Thu Feb 14 03:29:53 2019 -0600
++++ b/src/cpu/pred/yags.hh	Thu Feb 14 05:02:48 2019 -0600
 @@ -0,0 +1,69 @@
 +/* @file
 + * Implementation of a yags branch predictor
