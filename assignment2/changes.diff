@@ -1,0 +1,931 @@
+diff -r 40c18bb90501 -r b15553413a9d configs/common/Options.py
+--- a/configs/common/Options.py	Fri Mar 23 10:34:02 2018 -0700
++++ b/configs/common/Options.py	Thu Feb 14 03:29:53 2019 -0600
+@@ -131,6 +131,27 @@
+     # start by adding the base options that do not assume an ISA
+     addNoISAOptions(parser)
+ 
++    # Branch Predictor Types
++    parser.add_option("--bp_type", type="string", default="None", help="Type of branch predictor: 'None' 'BiModeBP' 'TournamentBP' 'LocalBP' 'LTAGE' 'GShareBP' 'YagsBP' 'PerceptronBP'")
++    # -- GShareBP --
++    parser.add_option("--pht_pred_size", type="int", default="8192", help="Entries in GShareBP Pattern History Table (PHT)")
++    parser.add_option("--pht_ctrl_bits", type="int", default="2", help="Bits of Pattern History Table (PHT) predictors")
++    # -- LocalBP --
++    parser.add_option("--local_pred_size", type="int", default="2048", help="Size of Local Predictor")
++    parser.add_option("--local_ctrl_bits", type="int", default="2", help="Bits per counter")
++    # -- TournamentBP --
++    parser.add_option("--local_hist_size", type="int", default="2048", help="Size of Local History Table")
++    # -- BiModalBP --
++    parser.add_option("--global_pred_size", type="int", default="8192", help="Size of Global Predictor")
++    parser.add_option("--global_ctrl_bits", type="int", default="2", help="Bits per Global counter")
++    parser.add_option("--choice_pred_size", type="int", default="8192", help="Size of Choice Predictor")
++    parser.add_option("--choice_ctrl_bits", type="int", default="2", help="Bits per Choice counter")
++    # -- YagsBP --
++    # -- PerceptronBP ==
++
++    
++
++
+     # system options
+     parser.add_option("--list-cpu-types",
+                       action="callback", callback=_listCpuTypes,
+diff -r 40c18bb90501 -r b15553413a9d configs/common/SysPaths.py
+--- a/configs/common/SysPaths.py	Fri Mar 23 10:34:02 2018 -0700
++++ b/configs/common/SysPaths.py	Thu Feb 14 03:29:53 2019 -0600
+@@ -32,7 +32,7 @@
+ config_root = os.path.dirname(config_path)
+ 
+ class PathSearchFunc(object):
+-    _sys_paths = None
++    _sys_paths = [ '/home/andrew/ece511/gem5/benchmarks/FSmode', '' ]
+ 
+     def __init__(self, subdirs, sys_paths=None):
+         if isinstance(subdirs, basestring):
+diff -r 40c18bb90501 -r b15553413a9d configs/example/se.py
+--- a/configs/example/se.py	Fri Mar 23 10:34:02 2018 -0700
++++ b/configs/example/se.py	Thu Feb 14 03:29:53 2019 -0600
+@@ -64,6 +64,7 @@
+ from common import MemConfig
+ from common.Caches import *
+ from common.cpu2000 import *
++from common.cores.arm.O3_ARM_v7a import *
+ 
+ # Check if KVM support has been enabled, we might need to do VM
+ # configuration if that's the case.
+@@ -171,6 +172,26 @@
+ 
+ (CPUClass, test_mem_mode, FutureClass) = Simulation.setCPUClass(options)
+ CPUClass.numThreads = numThreads
++# Configure Branch Predictor
++#if options.bp_type == "None" :
++
++if options.bp_type == "LocalBP" :
++  CPUClass.branchPred = LocalBP()
++
++if options.bp_type == "TournamentBP" :
++  CPUClass.branchPred = TournamentBP()
++
++if options.bp_type == "BiModeBP" :
++  CPUClass.branchPred = BiModeBP()
++
++if options.bp_type == "GShareBP" :
++  CPUClass.branchPred = GShareBP()
++
++if options.bp_type == "YagsBP" :
++  CPUClass.branchPred = YagsBP()
++
++if options.bp_type == "PerceptronBP" :
++  CPUClass.branchPred = PerceptronBP()
+ 
+ # Check -- do not allow SMT with multiple CPUs
+ if options.smt and options.num_cpus > 1:
+@@ -182,6 +203,9 @@
+                 mem_ranges = [AddrRange(options.mem_size)],
+                 cache_line_size = options.cacheline_size)
+ 
++# Configure Branch Predictors:
++
++
+ if numThreads > 1:
+     system.multi_thread = True
+ 
+diff -r 40c18bb90501 -r b15553413a9d src/arch/arm/linux/process.cc
+--- a/src/arch/arm/linux/process.cc	Fri Mar 23 10:34:02 2018 -0700
++++ b/src/arch/arm/linux/process.cc	Thu Feb 14 03:29:53 2019 -0600
+@@ -69,7 +69,7 @@
+ 
+     strcpy(name->sysname, "Linux");
+     strcpy(name->nodename, "m5.eecs.umich.edu");
+-    strcpy(name->release, "3.0.0");
++    strcpy(name->release, "3.2.0");
+     strcpy(name->version, "#1 Mon Aug 18 11:32:15 EDT 2003");
+     strcpy(name->machine, "armv7l");
+ 
+diff -r 40c18bb90501 -r b15553413a9d src/cpu/pred/BranchPredictor.py
+--- a/src/cpu/pred/BranchPredictor.py	Fri Mar 23 10:34:02 2018 -0700
++++ b/src/cpu/pred/BranchPredictor.py	Thu Feb 14 03:29:53 2019 -0600
+@@ -86,6 +86,33 @@
+     choicePredictorSize = Param.Unsigned(8192, "Size of choice predictor")
+     choiceCtrBits = Param.Unsigned(2, "Bits of choice counters")
+ 
++class YagsBP(BranchPredictor):
++    type = 'YagsBP'
++    cxx_class = 'YagsBP'
++    cxx_header = "cpu/pred/yags.hh"
++
++    globalPredictorSize = Param.Unsigned(8192, "Size of global predictor")
++    globalCtrBits = Param.Unsigned(2, "Bits per counter")
++    choicePredictorSize = Param.Unsigned(8192, "Size of choice predictor")
++    choiceCtrBits = Param.Unsigned(2, "Bits of choice counters")
++    tagMask = Param.Unsigned(8, "Bit width of global predictor tags")
++
++class GShareBP(BranchPredictor):
++    type = 'GShareBP'
++    cxx_class = 'GShareBP'
++    cxx_header = "cpu/pred/gshare.hh"
++
++    phtPredictorSize = Param.Unsigned(8192, "Entries in pattern history table")
++    phtCtrBits = Param.Unsigned(2, "Bits of pattern history table counters")
++
++class PerceptronBP(BranchPredictor):
++    type = 'PerceptronBP'
++    cxx_class = 'PerceptronBP'
++    cxx_header = "cpu/pred/perceptron.hh"
++
++    perceptronTableSize = Param.Unsigned(2048, "Entries in pattern history table")
++    historyRegisterBits = Param.Unsigned(12, "Bits of history register")
++
+ class LTAGE(BranchPredictor):
+     type = 'LTAGE'
+     cxx_class = 'LTAGE'
+diff -r 40c18bb90501 -r b15553413a9d src/cpu/pred/SConscript
+--- a/src/cpu/pred/SConscript	Fri Mar 23 10:34:02 2018 -0700
++++ b/src/cpu/pred/SConscript	Thu Feb 14 03:29:53 2019 -0600
+@@ -42,7 +42,10 @@
+ Source('indirect.cc')
+ Source('ras.cc')
+ Source('tournament.cc')
+-Source ('bi_mode.cc')
++Source('bi_mode.cc')
++Source('gshare.cc')
++Source('perceptron.cc')
++Source('yags.cc')
+ Source('ltage.cc')
+ DebugFlag('FreeList')
+ DebugFlag('Branch')
+diff -r 40c18bb90501 -r b15553413a9d src/cpu/pred/gshare.cc
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/src/cpu/pred/gshare.cc	Thu Feb 14 03:29:53 2019 -0600
+@@ -0,0 +1,162 @@
++
++/* @file
++ * Implementation of a GShare branch predictor
++ */
++
++#include "cpu/pred/gshare.hh"
++
++#include "base/bitfield.hh"
++#include "base/intmath.hh"
++
++GShareBP::GShareBP(const GShareBPParams *params)
++    : BPredUnit(params),
++      globalHistoryReg(params->numThreads, 0),
++      globalHistoryBits(ceilLog2(params->phtPredictorSize)),
++      phtPredictorSize(params->phtPredictorSize),
++      phtCtrBits(params->phtCtrBits)
++{
++    if (!isPowerOf2(phtPredictorSize))
++        fatal("Invalid choice predictor size.\n");
++
++    phtCounters.resize(phtPredictorSize);
++
++    for (int i = 0; i < phtPredictorSize; ++i) {
++        phtCounters[i].setBits(phtCtrBits);
++    }
++
++    historyRegisterMask = mask(globalHistoryBits);
++    phtHistoryMask = phtPredictorSize - 1;
++
++    phtThreshold = (ULL(1) << (phtCtrBits - 1)) - 1;
++}
++
++/*
++ * For an unconditional branch mark it as taken.
++ */
++void
++GShareBP::uncondBranch(ThreadID tid, Addr pc, void * &bpHistory)
++{
++    BPHistory *history = new BPHistory;
++    history->globalHistoryReg = globalHistoryReg[tid];
++    history->pred = true;
++    bpHistory = static_cast<void*>(history);
++    updateGlobalHistReg(tid, true);
++}
++
++void
++GShareBP::squash(ThreadID tid, void *bpHistory)
++{
++    BPHistory *history = static_cast<BPHistory*>(bpHistory);
++    globalHistoryReg[tid] = history->globalHistoryReg;
++
++    delete history;
++}
++
++/*
++ * Look up the prediction for a branch. Use the PC and a hash of the 
++ * global history register to index into the PHT and return the
++ * prediction.
++ */
++bool
++GShareBP::lookup(ThreadID tid, Addr branchAddr, void * &bpHistory)
++{
++    unsigned phtHistoryIdx = (((branchAddr >> instShiftAmt)
++                                ^ globalHistoryReg[tid])
++                                & phtHistoryMask);
++
++    assert(phtHistoryIdx < phtPredictorSize);
++
++    bool phtPrediction = phtCounters[phtHistoryIdx].read()
++                            > phtThreshold;
++
++    BPHistory *history = new BPHistory;
++    history->globalHistoryReg = globalHistoryReg[tid];
++    history->pred = phtPrediction;
++    bpHistory = static_cast<void*>(history);
++    updateGlobalHistReg(tid, phtPrediction);
++
++    return phtPrediction;
++}
++
++void
++GShareBP::btbUpdate(ThreadID tid, Addr branchAddr, void * &bpHistory)
++{
++    globalHistoryReg[tid] &= (historyRegisterMask & ~ULL(1));
++}
++
++/* Only the selected direction predictor will be updated with the final
++ * outcome; the status of the unselected one will not be altered. The choice
++ * predictor is always updated with the branch outcome, except when the
++ * choice is opposite to the branch outcome but the selected counter of
++ * the direction predictors makes a correct final prediction.
++ */
++void
++GShareBP::update(ThreadID tid, Addr branchAddr, bool taken, void *bpHistory,
++                 bool squashed)
++{
++    assert(bpHistory);
++
++    BPHistory *history = static_cast<BPHistory*>(bpHistory);
++
++    // We do not update the counters speculatively on a squash.
++    // We just restore the global history register.
++    if (squashed) {
++        globalHistoryReg[tid] = (history->globalHistoryReg << 1) | taken;
++        return;
++    }
++
++    unsigned phtHistoryIdx = (((branchAddr >> instShiftAmt)
++                                ^ history->globalHistoryReg)
++                                & phtHistoryMask);
++
++    assert(phtHistoryIdx < phtPredictorSize);
++
++    if(taken) {
++      phtCounters[phtHistoryIdx].increment();
++    }
++    else {
++      phtCounters[phtHistoryIdx].decrement();
++    }
++
++//    if (history->pred == taken) {
++//      if(taken) {
++//        /* Predicted taken correct */
++//        phtCounters[phtHistoryIdx].increment();
++//      }
++//      else {
++//        /* Predicted not taken correctly */
++//        phtCounters[phtHistoryIdx].decrement();
++//      } 
++//    } else {
++//      if (taken) {
++//        /* Predicted taken incorrectly */
++//        phtCounters[phtHistoryIdx].decrement();
++//      }
++//      else {
++//        /* Predicted not taken incorrectly */
++//        phtCounters[phtHistoryIdx].increment();
++//      }
++//    }
++
++    delete history;
++}
++
++unsigned
++GShareBP::getGHR(ThreadID tid, void *bp_history) const
++{
++    return static_cast<BPHistory*>(bp_history)->globalHistoryReg;
++}
++
++void
++GShareBP::updateGlobalHistReg(ThreadID tid, bool taken)
++{
++    globalHistoryReg[tid] = taken ? (globalHistoryReg[tid] << 1) | 1 :
++                               (globalHistoryReg[tid] << 1);
++    globalHistoryReg[tid] &= historyRegisterMask;
++}
++
++GShareBP*
++GShareBPParams::create()
++{
++    return new GShareBP(this);
++}
+diff -r 40c18bb90501 -r b15553413a9d src/cpu/pred/gshare.hh
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/src/cpu/pred/gshare.hh	Thu Feb 14 03:29:53 2019 -0600
+@@ -0,0 +1,50 @@
++/* @file
++ * Implementation of a GShare branch predictor
++ */
++
++#ifndef __CPU_PRED_GSHARE_PRED_HH__
++#define __CPU_PRED_GSHARE_PRED_HH__
++
++#include "cpu/pred/bpred_unit.hh"
++#include "cpu/pred/sat_counter.hh"
++#include "params/GShareBP.hh"
++
++class GShareBP : public BPredUnit
++{
++  public:
++    GShareBP(const GShareBPParams *params);
++    void uncondBranch(ThreadID tid, Addr pc, void * &bp_history);
++    void squash(ThreadID tid, void *bp_history);
++    bool lookup(ThreadID tid, Addr branch_addr, void * &bp_history);
++    void btbUpdate(ThreadID tid, Addr branch_addr, void * &bp_history);
++    void update(ThreadID tid, Addr branch_addr, bool taken, void *bp_history,
++                bool squashed);
++    unsigned getGHR(ThreadID tid, void *bp_history) const;
++
++  private:
++    void updateGlobalHistReg(ThreadID tid, bool taken);
++
++    struct BPHistory {
++        unsigned globalHistoryReg;
++        // the final taken/not-taken prediction
++        // true: predict taken
++        // false: predict not-taken
++        bool pred;
++    };
++
++    // pattern history table predictors
++    std::vector<SatCounter> phtCounters;
++
++    std::vector<unsigned> globalHistoryReg;
++
++    unsigned globalHistoryBits;
++    unsigned historyRegisterMask;
++
++    unsigned phtPredictorSize;
++    unsigned phtCtrBits;
++    unsigned phtHistoryMask;
++
++    unsigned phtThreshold;
++};
++
++#endif // __CPU_PRED_GSHARE_PRED_HH__
+diff -r 40c18bb90501 -r b15553413a9d src/cpu/pred/perceptron.cc
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/src/cpu/pred/perceptron.cc	Thu Feb 14 03:29:53 2019 -0600
+@@ -0,0 +1,169 @@
++
++/* @file
++ * Implementation of a Perceptron branch predictor
++ */
++
++#include "cpu/pred/perceptron.hh"
++
++#include "base/bitfield.hh"
++#include "base/intmath.hh"
++#include <cstdlib>
++
++PerceptronBP::PerceptronBP(const PerceptronBPParams *params)
++    : BPredUnit(params),
++      globalHistoryReg(params->numThreads, 0),
++      historyRegisterMask(mask(params->historyRegisterBits)),
++      historyRegisterBits(params->historyRegisterBits),
++      perceptronTableSize(params->perceptronTableSize),
++      perceptronTableMask(mask(ceilLog2(params->perceptronTableSize))),
++      theta((int)((float)params->historyRegisterBits*1.93f) + 14)
++{
++  if (!isPowerOf2(perceptronTableSize))
++      fatal("Invalid choice predictor size.\n");
++
++  perceptrons.resize(perceptronTableSize);
++
++  // Create randowm weights:
++  for (int i = 0; i < perceptronTableSize; ++i) {
++    perceptrons[i].resize(historyRegisterBits);
++    for(int j = 0; j < historyRegisterBits; j++) {
++      perceptrons[i][j] = std::rand()%2 - 1;
++    }
++  }
++}
++
++/*
++ * For an unconditional branch mark it as taken.
++ */
++void
++PerceptronBP::uncondBranch(ThreadID tid, Addr pc, void * &bpHistory)
++{
++  BPHistory *history = new BPHistory;
++  history->globalHistoryReg = globalHistoryReg[tid];
++  history->pred = true;
++  history->uncond = true;
++  bpHistory = static_cast<void*>(history);
++  updateGlobalHistReg(tid, true);
++}
++
++void
++PerceptronBP::squash(ThreadID tid, void *bpHistory)
++{
++  BPHistory *history = static_cast<BPHistory*>(bpHistory);
++  globalHistoryReg[tid] = history->globalHistoryReg;
++
++  delete history;
++}
++
++/*
++ * Look up the prediction for a branch. Use the PC and a hash of the 
++ * global history register to index into the PHT and return the
++ * prediction.
++ */
++bool
++PerceptronBP::lookup(ThreadID tid, Addr branchAddr, void * &bpHistory)
++{
++  unsigned perceptronIdx = ((branchAddr >> instShiftAmt) & perceptronTableMask);
++
++  assert(perceptronIdx < perceptronTableSize);
++
++  // Caclulate the output of the perceptron and input vector:
++  int out = classify(tid, perceptrons[perceptronIdx]);
++
++  bool perceptronPrediction = (out > 0);
++
++  BPHistory *history = new BPHistory;
++  history->globalHistoryReg = globalHistoryReg[tid];
++  history->pred = perceptronPrediction;
++  history->perceptronOutput = out;
++  history->uncond = false;
++  bpHistory = static_cast<void*>(history);
++  updateGlobalHistReg(tid, perceptronPrediction);
++
++  return perceptronPrediction;
++}
++
++int
++PerceptronBP::classify(ThreadID tid, std::vector<int> weights) {
++  // evaluate:
++  int output = weights[0]; //Bias
++  unsigned mask = 1;
++
++  unsigned history = globalHistoryReg[tid] >> 1;
++
++  for(int i = 1; i < historyRegisterBits; i++) {
++    output += (((history & mask) > 0) ? 1 : -1)*weights[i];
++    mask = mask << 1;
++  }
++
++  return output;
++}
++
++void
++PerceptronBP::train(unsigned perceptronIdx, bool pred, bool taken, int output, unsigned history) {
++  int t = taken ? 1 : -1;
++  unsigned mask = 1;
++  if((pred != taken) || (std::abs(output) < theta)) {
++    for(int i = 0; i < historyRegisterBits; i++) {
++      perceptrons[perceptronIdx][i] += t*(((history & mask) > 0) ? 1 : -1);
++      mask = mask << 1;
++    }
++  }
++}
++
++void
++PerceptronBP::btbUpdate(ThreadID tid, Addr branchAddr, void * &bpHistory)
++{
++    globalHistoryReg[tid] &= (historyRegisterMask & ~ULL(1));
++}
++
++/* Only the selected direction predictor will be updated with the final
++ * outcome; the status of the unselected one will not be altered. The choice
++ * predictor is always updated with the branch outcome, except when the
++ * choice is opposite to the branch outcome but the selected counter of
++ * the direction predictors makes a correct final prediction.
++ */
++void
++PerceptronBP::update(ThreadID tid, Addr branchAddr, bool taken, void *bpHistory,
++                 bool squashed)
++{
++    assert(bpHistory);
++
++    BPHistory *history = static_cast<BPHistory*>(bpHistory);
++
++    // We do not update the counters speculatively on a squash.
++    // We just restore the global history register.
++    if (squashed) {
++        globalHistoryReg[tid] = (history->globalHistoryReg << 1) | taken;
++        return;
++    }
++
++    unsigned perceptronIdx = ((branchAddr >> instShiftAmt) & perceptronTableMask);
++
++    assert(perceptronIdx < preceptronTableSize);
++
++    // Train the perceptron:
++    train(perceptronIdx, history->pred, taken, history->perceptronOutput, history->globalHistoryReg);
++
++    delete history;
++}
++
++unsigned
++PerceptronBP::getGHR(ThreadID tid, void *bp_history) const
++{
++    return static_cast<BPHistory*>(bp_history)->globalHistoryReg;
++}
++
++void
++PerceptronBP::updateGlobalHistReg(ThreadID tid, bool taken)
++{
++    globalHistoryReg[tid] = taken ? (globalHistoryReg[tid] << 1) | 1 :
++                               (globalHistoryReg[tid] << 1);
++    globalHistoryReg[tid] &= historyRegisterMask;
++}
++
++PerceptronBP*
++PerceptronBPParams::create()
++{
++    return new PerceptronBP(this);
++}
+diff -r 40c18bb90501 -r b15553413a9d src/cpu/pred/perceptron.hh
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/src/cpu/pred/perceptron.hh	Thu Feb 14 03:29:53 2019 -0600
+@@ -0,0 +1,50 @@
++/* @file
++ * Implementation of a Perceptron branch predictor
++ */
++
++#ifndef __CPU_PRED_PERCEPTRON_PRED_HH__
++#define __CPU_PRED_PERCEPTRON_PRED_HH__
++
++#include "cpu/pred/bpred_unit.hh"
++#include "cpu/pred/sat_counter.hh"
++#include "params/PerceptronBP.hh"
++
++class PerceptronBP : public BPredUnit
++{
++  public:
++    PerceptronBP(const PerceptronBPParams *params);
++    void uncondBranch(ThreadID tid, Addr pc, void * &bp_history);
++    void squash(ThreadID tid, void *bp_history);
++    bool lookup(ThreadID tid, Addr branch_addr, void * &bp_history);
++    void btbUpdate(ThreadID tid, Addr branch_addr, void * &bp_history);
++    void update(ThreadID tid, Addr branch_addr, bool taken, void *bp_history,
++                bool squashed);
++    unsigned getGHR(ThreadID tid, void *bp_history) const;
++
++  private:
++    void updateGlobalHistReg(ThreadID tid, bool taken);
++    int classify(ThreadID, std::vector<int> weights);
++    void train(unsigned perceptronIdx, bool pred, bool taken, int output, unsigned history);
++
++    struct BPHistory {
++        unsigned globalHistoryReg;
++        int perceptronOutput;
++        bool uncond;
++        bool pred;
++    };
++
++    // Table of Perceptrons
++    std::vector<std::vector<int>>perceptrons;
++
++    // Global History Register
++    std::vector<unsigned> globalHistoryReg;
++
++    // Parameters
++    unsigned historyRegisterMask;
++    unsigned historyRegisterBits;
++    unsigned perceptronTableSize;
++    unsigned perceptronTableMask;
++    int theta;
++};
++
++#endif // __CPU_PRED_PERCEPTRON_PRED_HH__
+diff -r 40c18bb90501 -r b15553413a9d src/cpu/pred/yags.cc
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/src/cpu/pred/yags.cc	Thu Feb 14 03:29:53 2019 -0600
+@@ -0,0 +1,252 @@
++/* @file
++ * Implementation of a yags branch predictor
++ */
++
++#include "cpu/pred/yags.hh"
++
++#include "base/bitfield.hh"
++#include "base/intmath.hh"
++
++YagsBP::YagsBP(const YagsBPParams *params)
++    : BPredUnit(params),
++      globalHistoryReg(params->numThreads, 0),
++      globalHistoryBits(ceilLog2(params->globalPredictorSize)),
++      choicePredictorSize(params->choicePredictorSize),
++      choiceCtrBits(params->choiceCtrBits),
++      globalPredictorSize(params->globalPredictorSize),
++      globalCtrBits(params->globalCtrBits),
++      tagMask(mask(params->tagMask))
++{
++    if (!isPowerOf2(choicePredictorSize))
++        fatal("Invalid choice predictor size.\n");
++    if (!isPowerOf2(globalPredictorSize))
++        fatal("Invalid global history predictor size.\n");
++
++    choiceCounters.resize(choicePredictorSize);
++    takenCounters.resize(globalPredictorSize);
++    takenTags.resize(globalPredictorSize);
++    notTakenCounters.resize(globalPredictorSize);
++    notTakenTags.resize(globalPredictorSize);
++
++    for (int i = 0; i < choicePredictorSize; ++i) {
++        choiceCounters[i].setBits(choiceCtrBits);
++    }
++    for (int i = 0; i < globalPredictorSize; ++i) {
++        takenCounters[i].setBits(globalCtrBits);
++        notTakenCounters[i].setBits(globalCtrBits);
++    }
++
++    historyRegisterMask = mask(globalHistoryBits);
++    choiceHistoryMask = choicePredictorSize - 1;
++    globalHistoryMask = globalPredictorSize - 1;
++
++    choiceThreshold = (ULL(1) << (choiceCtrBits - 1)) - 1;
++    takenThreshold = (ULL(1) << (globalCtrBits - 1)) - 1;
++    notTakenThreshold = (ULL(1) << (globalCtrBits - 1)) - 1;
++}
++
++/*
++ * For an unconditional branch we set its history such that
++ * everything is set to taken. I.e., its choice predictor
++ * chooses the taken array and the taken array predicts taken.
++ */
++void
++YagsBP::uncondBranch(ThreadID tid, Addr pc, void * &bpHistory)
++{
++    BPHistory *history = new BPHistory;
++    history->globalHistoryReg = globalHistoryReg[tid];
++    history->choicePrediction = true;
++    history->takenPred = true;
++    history->notTakenPred = true;
++    history->finalPred = true;
++    history->cacheHit = false;
++    bpHistory = static_cast<void*>(history);
++    updateGlobalHistReg(tid, true);
++}
++
++void
++YagsBP::squash(ThreadID tid, void *bpHistory)
++{
++    BPHistory *history = static_cast<BPHistory*>(bpHistory);
++    globalHistoryReg[tid] = history->globalHistoryReg;
++
++    delete history;
++}
++
++/*
++ * Here we lookup the actual branch prediction. We use the PC to
++ * identify the bias of a particular branch, which is based on the
++ * prediction in the choice array. A hash of the global history
++ * register and a branch's PC is used to index into both the taken
++ * and not-taken predictors, which both present a prediction. The
++ * choice array's prediction is used to select between the two
++ * direction predictors for the final branch prediction.
++ */
++bool
++YagsBP::lookup(ThreadID tid, Addr branchAddr, void * &bpHistory)
++{
++    unsigned choiceHistoryIdx = ((branchAddr >> instShiftAmt)
++                                & choiceHistoryMask);
++    unsigned globalHistoryIdx = (((branchAddr >> instShiftAmt)
++                                ^ globalHistoryReg[tid])
++                                & globalHistoryMask);
++
++    assert(choiceHistoryIdx < choicePredictorSize);
++    assert(globalHistoryIdx < globalPredictorSize);
++
++    bool choicePrediction = choiceCounters[choiceHistoryIdx].read() > choiceThreshold;
++
++    bool takenHit = (((branchAddr >> 2) & tagMask) == takenTags[globalHistoryIdx]);
++
++    bool notTakenHit = (((branchAddr >> 2) & tagMask) == notTakenTags[globalHistoryIdx]);
++
++    bool takenGHBPrediction = takenCounters[globalHistoryIdx].read() > takenThreshold;
++
++    bool notTakenGHBPrediction = notTakenCounters[globalHistoryIdx].read() > notTakenThreshold;
++
++    bool cacheHit;
++    bool globalPrediction;
++
++    if(choicePrediction) {
++      cacheHit = notTakenHit;
++      globalPrediction = notTakenGHBPrediction;
++    }
++    else {
++      cacheHit = takenHit;
++      globalPrediction = takenGHBPrediction;
++    }
++
++
++    bool finalPrediction;
++
++    BPHistory *history = new BPHistory;
++    history->globalHistoryReg = globalHistoryReg[tid];
++    history->choicePrediction = choicePrediction;
++    history->takenPred = takenGHBPrediction;
++    history->notTakenPred = notTakenGHBPrediction;
++    history->cacheHit = cacheHit;
++
++    if (cacheHit) {
++      finalPrediction = globalPrediction;
++    } else {
++      finalPrediction = choicePrediction;
++    }
++
++    history->finalPred = finalPrediction;
++    bpHistory = static_cast<void*>(history);
++    updateGlobalHistReg(tid, finalPrediction);
++
++    return finalPrediction;
++}
++
++void
++YagsBP::btbUpdate(ThreadID tid, Addr branchAddr, void * &bpHistory)
++{
++    globalHistoryReg[tid] &= (historyRegisterMask & ~ULL(1));
++}
++
++/* Only the selected direction predictor will be updated with the final
++ * outcome; the status of the unselected one will not be altered. The choice
++ * predictor is always updated with the branch outcome, except when the
++ * choice is opposite to the branch outcome but the selected counter of
++ * the direction predictors makes a correct final prediction.
++ */
++void
++YagsBP::update(ThreadID tid, Addr branchAddr, bool taken, void *bpHistory,
++                 bool squashed)
++{
++    assert(bpHistory);
++
++    BPHistory *history = static_cast<BPHistory*>(bpHistory);
++
++    // We do not update the counters speculatively on a squash.
++    // We just restore the global history register.
++    if (squashed) {
++        globalHistoryReg[tid] = (history->globalHistoryReg << 1) | taken;
++        return;
++    }
++
++    unsigned choiceHistoryIdx = ((branchAddr >> instShiftAmt) & choiceHistoryMask);
++    unsigned globalHistoryIdx = (((branchAddr >> instShiftAmt) ^ history->globalHistoryReg) & globalHistoryMask);
++
++    assert(choiceHistoryIdx < choicePredictorSize);
++    assert(globalHistoryIdx < globalPredictorSize);
++
++    if (history->choicePrediction) {
++      if(history->cacheHit) {
++        // Hit in notTakenPredictor
++        if(taken) {
++          notTakenCounters[globalHistoryIdx].increment();
++        }
++        else {
++          notTakenCounters[globalHistoryIdx].decrement();
++        }
++      }
++    } else {
++      if(history->cacheHit) {
++        // Hit in takenPredictor
++        if (taken) {
++            takenCounters[globalHistoryIdx].increment();
++        } else {
++            takenCounters[globalHistoryIdx].decrement();
++        }
++      }
++    }
++
++    if (history->finalPred == taken) {
++       /* If the final prediction matches the actual branch's
++        * outcome and the choice predictor matches the final
++        * outcome, we update the choice predictor, otherwise it
++        * is not updated. While the designers of the bi-mode
++        * predictor don't explicity say why this is done, one
++        * can infer that it is to preserve the choice predictor's
++        * bias with respect to the branch being predicted; afterall,
++        * the whole point of the bi-mode predictor is to identify the
++        * atypical case when a branch deviates from its bias.
++        */
++        if (history->finalPred == history->choicePrediction) {
++            if (taken) {
++                choiceCounters[choiceHistoryIdx].increment();
++            } else {
++                choiceCounters[choiceHistoryIdx].decrement();
++            }
++        }
++    } else {
++        // always update the choice predictor on an incorrect prediction
++        if (taken) {
++            choiceCounters[choiceHistoryIdx].increment();
++        } else {
++            choiceCounters[choiceHistoryIdx].decrement();
++        }
++    }
++
++    // Update TAG
++    if(history->choicePrediction) {
++      notTakenTags[globalHistoryIdx] = (branchAddr >> 2) & tagMask;
++    }
++    else {
++      takenTags[globalHistoryIdx] = (branchAddr >> 2) & tagMask;
++    }
++
++    delete history;
++}
++
++unsigned
++YagsBP::getGHR(ThreadID tid, void *bp_history) const
++{
++    return static_cast<BPHistory*>(bp_history)->globalHistoryReg;
++}
++
++void
++YagsBP::updateGlobalHistReg(ThreadID tid, bool taken)
++{
++    globalHistoryReg[tid] = taken ? (globalHistoryReg[tid] << 1) | 1 :
++                               (globalHistoryReg[tid] << 1);
++    globalHistoryReg[tid] &= historyRegisterMask;
++}
++
++YagsBP*
++YagsBPParams::create()
++{
++    return new YagsBP(this);
++}
+diff -r 40c18bb90501 -r b15553413a9d src/cpu/pred/yags.hh
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/src/cpu/pred/yags.hh	Thu Feb 14 03:29:53 2019 -0600
+@@ -0,0 +1,69 @@
++/* @file
++ * Implementation of a yags branch predictor
++ */
++
++#ifndef __CPU_PRED_YAGS_PRED_HH__
++#define __CPU_PRED_YAGS_PRED_HH__
++
++#include "cpu/pred/bpred_unit.hh"
++#include "cpu/pred/sat_counter.hh"
++#include "params/YagsBP.hh"
++
++class YagsBP : public BPredUnit
++{
++  public:
++    YagsBP(const YagsBPParams *params);
++    void uncondBranch(ThreadID tid, Addr pc, void * &bp_history);
++    void squash(ThreadID tid, void *bp_history);
++    bool lookup(ThreadID tid, Addr branch_addr, void * &bp_history);
++    void btbUpdate(ThreadID tid, Addr branch_addr, void * &bp_history);
++    void update(ThreadID tid, Addr branch_addr, bool taken, void *bp_history,
++                bool squashed);
++    unsigned getGHR(ThreadID tid, void *bp_history) const;
++
++  private:
++    void updateGlobalHistReg(ThreadID tid, bool taken);
++
++    struct BPHistory {
++        unsigned globalHistoryReg;
++        bool choicePrediction;
++        bool takenPred;
++        bool notTakenPred;
++        bool finalPred;
++        bool cacheHit;
++    };
++
++    // choice predictors
++    std::vector<SatCounter> choiceCounters;
++
++    // taken direction predictors
++    std::vector<SatCounter> takenCounters;
++    std::vector<unsigned> takenTags;
++
++    // not-taken direction predictors
++    std::vector<SatCounter> notTakenCounters;
++    std::vector<unsigned> notTakenTags;
++
++    std::vector<unsigned> globalHistoryReg;
++    unsigned globalHistoryBits;
++    unsigned historyRegisterMask;
++    
++    // Choice Predictor Params
++    unsigned choicePredictorSize;
++    unsigned choiceCtrBits;
++    unsigned choiceHistoryMask;
++
++    // Global History Predictor Params
++    unsigned globalPredictorSize;
++    unsigned globalCtrBits;
++    unsigned globalHistoryMask;
++
++    // Tag mask for address compare
++    unsigned tagMask;
++
++    unsigned choiceThreshold;
++    unsigned takenThreshold;
++    unsigned notTakenThreshold;
++};
++
++#endif // __CPU_PRED_YAGS_PRED_HH__
