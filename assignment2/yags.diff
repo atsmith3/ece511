@@ -1,6 +1,30 @@
-diff -r 7f72aa0fe202 -r 6bb558b3407e src/cpu/pred/BranchPredictor.py
+diff -r 7f72aa0fe202 -r 7e730f6167d0 configs/example/se.py
+--- a/configs/example/se.py	Tue Feb 12 22:11:58 2019 -0600
++++ b/configs/example/se.py	Wed Feb 13 23:26:25 2019 -0600
+@@ -123,10 +123,6 @@
+     else:
+         return multiprocesses, 1
+ 
+-def BPConfig(options):
+-  return None
+-
+-
+ 
+ parser = optparse.OptionParser()
+ Options.addCommonOptions(parser)
+@@ -191,7 +187,8 @@
+ if options.bp_type == "GShareBP" :
+   CPUClass.branchPred = GShareBP()
+ 
+-#if options.bp_type == "YagsBP" :
++if options.bp_type == "YagsBP" :
++  CPUClass.branchPred = YagsBP()
+ 
+ #if options.bp_type == "PerceptronBP" :
+ 
+diff -r 7f72aa0fe202 -r 7e730f6167d0 src/cpu/pred/BranchPredictor.py
 --- a/src/cpu/pred/BranchPredictor.py	Tue Feb 12 22:11:58 2019 -0600
-+++ b/src/cpu/pred/BranchPredictor.py	Wed Feb 13 02:14:25 2019 -0600
++++ b/src/cpu/pred/BranchPredictor.py	Wed Feb 13 23:26:25 2019 -0600
 @@ -86,6 +86,17 @@
      choicePredictorSize = Param.Unsigned(8192, "Size of choice predictor")
      choiceCtrBits = Param.Unsigned(2, "Bits of choice counters")
@@ -19,9 +43,9 @@ diff -r 7f72aa0fe202 -r 6bb558b3407e src/cpu/pred/BranchPredictor.py
  class GShareBP(BranchPredictor):
      type = 'GShareBP'
      cxx_class = 'GShareBP'
-diff -r 7f72aa0fe202 -r 6bb558b3407e src/cpu/pred/SConscript
+diff -r 7f72aa0fe202 -r 7e730f6167d0 src/cpu/pred/SConscript
 --- a/src/cpu/pred/SConscript	Tue Feb 12 22:11:58 2019 -0600
-+++ b/src/cpu/pred/SConscript	Wed Feb 13 02:14:25 2019 -0600
++++ b/src/cpu/pred/SConscript	Wed Feb 13 23:26:25 2019 -0600
 @@ -42,8 +42,9 @@
  Source('indirect.cc')
  Source('ras.cc')
@@ -34,10 +58,10 @@ diff -r 7f72aa0fe202 -r 6bb558b3407e src/cpu/pred/SConscript
  Source('ltage.cc')
  DebugFlag('FreeList')
  DebugFlag('Branch')
-diff -r 7f72aa0fe202 -r 6bb558b3407e src/cpu/pred/yags.cc
+diff -r 7f72aa0fe202 -r 7e730f6167d0 src/cpu/pred/yags.cc
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/src/cpu/pred/yags.cc	Wed Feb 13 02:14:25 2019 -0600
-@@ -0,0 +1,231 @@
++++ b/src/cpu/pred/yags.cc	Wed Feb 13 23:26:25 2019 -0600
+@@ -0,0 +1,252 @@
 +/* @file
 + * Implementation of a yags branch predictor
 + */
@@ -63,25 +87,17 @@ diff -r 7f72aa0fe202 -r 6bb558b3407e src/cpu/pred/yags.cc
 +        fatal("Invalid global history predictor size.\n");
 +
 +    choiceCounters.resize(choicePredictorSize);
-+    takenCountersA.resize(globalPredictorSize);
-+    takenTagsA.resize(globalPredictorSize);
-+    takenCountersB.resize(globalPredictorSize);
-+    takenTagsB.resize(globalPredictorSize);
-+    takenLru.resize(globalPredictorSize);
-+    notTakenCountersA.resize(globalPredictorSize);
-+    notTakenTagsA.resize(globalPredictorSize);
-+    notTakenCountersB.resize(globalPredictorSize);
-+    notTakenTagsB.resize(globalPredictorSize);
-+    notTakenLru.resize(globalPredictorSize);
++    takenCounters.resize(globalPredictorSize);
++    takenTags.resize(globalPredictorSize);
++    notTakenCounters.resize(globalPredictorSize);
++    notTakenTags.resize(globalPredictorSize);
 +
 +    for (int i = 0; i < choicePredictorSize; ++i) {
 +        choiceCounters[i].setBits(choiceCtrBits);
 +    }
 +    for (int i = 0; i < globalPredictorSize; ++i) {
-+        takenCountersA[i].setBits(globalCtrBits);
-+        notTakenCountersA[i].setBits(globalCtrBits);
-+        takenCountersB[i].setBits(globalCtrBits);
-+        notTakenCountersB[i].setBits(globalCtrBits);
++        takenCounters[i].setBits(globalCtrBits);
++        notTakenCounters[i].setBits(globalCtrBits);
 +    }
 +
 +    historyRegisterMask = mask(globalHistoryBits);
@@ -103,10 +119,11 @@ diff -r 7f72aa0fe202 -r 6bb558b3407e src/cpu/pred/yags.cc
 +{
 +    BPHistory *history = new BPHistory;
 +    history->globalHistoryReg = globalHistoryReg[tid];
-+    history->takenUsed = true;
++    history->choicePrediction = true;
 +    history->takenPred = true;
 +    history->notTakenPred = true;
 +    history->finalPred = true;
++    history->cacheHit = false;
 +    bpHistory = static_cast<void*>(history);
 +    updateGlobalHistReg(tid, true);
 +}
@@ -141,24 +158,42 @@ diff -r 7f72aa0fe202 -r 6bb558b3407e src/cpu/pred/yags.cc
 +    assert(choiceHistoryIdx < choicePredictorSize);
 +    assert(globalHistoryIdx < globalPredictorSize);
 +
-+    bool choicePrediction = choiceCounters[choiceHistoryIdx].read()
-+                            > choiceThreshold;
-+    bool takenGHBPrediction = takenCounters[globalHistoryIdx].read()
-+                              > takenThreshold;
-+    bool notTakenGHBPrediction = notTakenCounters[globalHistoryIdx].read()
-+                                 > notTakenThreshold;
++    bool choicePrediction = choiceCounters[choiceHistoryIdx].read() > choiceThreshold;
++
++    bool takenHit = (((branchAddr >> 2) & tagMask) == takenTags[globalHistoryIdx]);
++
++    bool notTakenHit = (((branchAddr >> 2) & tagMask) == notTakenTags[globalHistoryIdx]);
++
++    bool takenGHBPrediction = takenCounters[globalHistoryIdx].read() > takenThreshold;
++
++    bool notTakenGHBPrediction = notTakenCounters[globalHistoryIdx].read() > notTakenThreshold;
++
++    bool cacheHit;
++    bool globalPrediction;
++
++    if(choicePrediction) {
++      cacheHit = notTakenHit;
++      globalPrediction = notTakenGHBPrediction;
++    }
++    else {
++      cacheHit = takenHit;
++      globalPrediction = takenGHBPrediction;
++    }
++
++
 +    bool finalPrediction;
 +
 +    BPHistory *history = new BPHistory;
 +    history->globalHistoryReg = globalHistoryReg[tid];
-+    history->takenUsed = choicePrediction;
++    history->choicePrediction = choicePrediction;
 +    history->takenPred = takenGHBPrediction;
 +    history->notTakenPred = notTakenGHBPrediction;
++    history->cacheHit = cacheHit;
 +
-+    if (choicePrediction) {
-+        finalPrediction = takenGHBPrediction;
++    if (cacheHit) {
++      finalPrediction = globalPrediction;
 +    } else {
-+        finalPrediction = notTakenGHBPrediction;
++      finalPrediction = choicePrediction;
 +    }
 +
 +    history->finalPred = finalPrediction;
@@ -195,29 +230,31 @@ diff -r 7f72aa0fe202 -r 6bb558b3407e src/cpu/pred/yags.cc
 +        return;
 +    }
 +
-+    unsigned choiceHistoryIdx = ((branchAddr >> instShiftAmt)
-+                                & choiceHistoryMask);
-+    unsigned globalHistoryIdx = (((branchAddr >> instShiftAmt)
-+                                ^ history->globalHistoryReg)
-+                                & globalHistoryMask);
++    unsigned choiceHistoryIdx = ((branchAddr >> instShiftAmt) & choiceHistoryMask);
++    unsigned globalHistoryIdx = (((branchAddr >> instShiftAmt) ^ history->globalHistoryReg) & globalHistoryMask);
 +
 +    assert(choiceHistoryIdx < choicePredictorSize);
 +    assert(globalHistoryIdx < globalPredictorSize);
 +
-+    if (history->takenUsed) {
-+        // if the taken array's prediction was used, update it
++    if (history->choicePrediction) {
++      if(history->cacheHit) {
++        // Hit in notTakenPredictor
++        if(taken) {
++          notTakenCounters[globalHistoryIdx].increment();
++        }
++        else {
++          notTakenCounters[globalHistoryIdx].decrement();
++        }
++      }
++    } else {
++      if(history->cacheHit) {
++        // Hit in takenPredictor
 +        if (taken) {
 +            takenCounters[globalHistoryIdx].increment();
 +        } else {
 +            takenCounters[globalHistoryIdx].decrement();
 +        }
-+    } else {
-+        // if the not-taken array's prediction was used, update it
-+        if (taken) {
-+            notTakenCounters[globalHistoryIdx].increment();
-+        } else {
-+            notTakenCounters[globalHistoryIdx].decrement();
-+        }
++      }
 +    }
 +
 +    if (history->finalPred == taken) {
@@ -231,7 +268,7 @@ diff -r 7f72aa0fe202 -r 6bb558b3407e src/cpu/pred/yags.cc
 +        * the whole point of the bi-mode predictor is to identify the
 +        * atypical case when a branch deviates from its bias.
 +        */
-+        if (history->finalPred == history->takenUsed) {
++        if (history->finalPred == history->choicePrediction) {
 +            if (taken) {
 +                choiceCounters[choiceHistoryIdx].increment();
 +            } else {
@@ -245,6 +282,14 @@ diff -r 7f72aa0fe202 -r 6bb558b3407e src/cpu/pred/yags.cc
 +        } else {
 +            choiceCounters[choiceHistoryIdx].decrement();
 +        }
++    }
++
++    // Update TAG
++    if(history->choicePrediction) {
++      notTakenTags[globalHistoryIdx] = (branchAddr >> 2) & tagMask;
++    }
++    else {
++      takenTags[globalHistoryIdx] = (branchAddr >> 2) & tagMask;
 +    }
 +
 +    delete history;
@@ -269,10 +314,10 @@ diff -r 7f72aa0fe202 -r 6bb558b3407e src/cpu/pred/yags.cc
 +{
 +    return new YagsBP(this);
 +}
-diff -r 7f72aa0fe202 -r 6bb558b3407e src/cpu/pred/yags.hh
+diff -r 7f72aa0fe202 -r 7e730f6167d0 src/cpu/pred/yags.hh
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/src/cpu/pred/yags.hh	Wed Feb 13 02:14:25 2019 -0600
-@@ -0,0 +1,86 @@
++++ b/src/cpu/pred/yags.hh	Wed Feb 13 23:26:25 2019 -0600
+@@ -0,0 +1,71 @@
 +/* @file
 + * Implementation of a yags branch predictor
 + */
@@ -301,40 +346,25 @@ diff -r 7f72aa0fe202 -r 6bb558b3407e src/cpu/pred/yags.hh
 +
 +    struct BPHistory {
 +        unsigned globalHistoryReg;
-+        // was the taken array's prediction used?
-+        // true: takenPred used
-+        // false: notPred used
++        bool choicePrediction;
 +        bool takenUsed;
-+        // prediction of the taken array
-+        // true: predict taken
-+        // false: predict not-taken
++        bool notTakenUsed;
 +        bool takenPred;
-+        // prediction of the not-taken array
-+        // true: predict taken
-+        // false: predict not-taken
 +        bool notTakenPred;
-+        // the final taken/not-taken prediction
-+        // true: predict taken
-+        // false: predict not-taken
 +        bool finalPred;
++        bool cacheHit;
 +    };
 +
 +    // choice predictors
 +    std::vector<SatCounter> choiceCounters;
 +
 +    // taken direction predictors
-+    std::vector<SatCounter> takenCountersA;
-+    std::vector<unsigned> takenTagsA;
-+    std::vector<SatCounter> takenCountersB;
-+    std::vector<unsigned> takenTagsB;
-+    std::vector<bool> takenLru;
++    std::vector<SatCounter> takenCounters;
++    std::vector<unsigned> takenTags;
 +
 +    // not-taken direction predictors
-+    std::vector<SatCounter> notTakenCountersA;
-+    std::vector<unsigned> notTakenTagsA;
-+    std::vector<SatCounter> notTakenCountersB;
-+    std::vector<unsigned> notTakenTagsB;
-+    std::vector<bool> notTakenLru;
++    std::vector<SatCounter> notTakenCounters;
++    std::vector<unsigned> notTakenTags;
 +
 +    std::vector<unsigned> globalHistoryReg;
 +    unsigned globalHistoryBits;
