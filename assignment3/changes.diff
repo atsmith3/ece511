@@ -1,14 +1,38 @@
-diff -r 40c18bb90501 -r 13bab69f9465 .hgtags
+diff -r 40c18bb90501 -r 556442b203df .hgtags
 --- a/.hgtags	Fri Mar 23 10:34:02 2018 -0700
-+++ b/.hgtags	Sun Feb 24 02:41:32 2019 -0600
++++ b/.hgtags	Sun Feb 24 04:44:27 2019 -0600
 @@ -28,3 +28,4 @@
  bdb307e8be54a5808a9af2537e9261d88de6ed1b stable_2014_12_14
  e1794974515011f81f8d0fda7543ba3360a12c9b stable_2015_04_15
  60eb3fef9c2d51cf98cdb5501ee0c4ac0efe6eae stable_2015_09_03
 +40c18bb9050171d94bbb2fdbf8d46064c1590dc1 prefetch
-diff -r 40c18bb90501 -r 13bab69f9465 configs/common/SysPaths.py
+diff -r 40c18bb90501 -r 556442b203df configs/common/Options.py
+--- a/configs/common/Options.py	Fri Mar 23 10:34:02 2018 -0700
++++ b/configs/common/Options.py	Sun Feb 24 04:44:27 2019 -0600
+@@ -292,6 +292,20 @@
+                       choices=["arm", "thumb", "aarch64"],
+                       help="ARM instruction set.")
+ 
++    # Options for Prefetchers:
++    # Queued Prefetcher Options
++    parser.add_option("--prefetch_queue_size", default=32, type="int", help="Maximum number of queued prefetches")
++    # Stride Prefetcher Options
++    parser.add_option("--prefetch_thresh_conf", default=7, type="int", help="Maximum confidence level")
++    parser.add_option("--prefetch_table_sets", default=16, type="int", help="Number of sets in PC lookup table")
++    parser.add_option("--prefetch_table_assoc", default=4, type="int", help="Associativity of PC lookup table")
++    # Tagged Prefetcher
++    parser.add_option("--prefetch_degree", default=4, type="int", help="Number of prefetches to generate")
++    # Markov Prefetcher
++    parser.add_option("--prefetch_threshold", default=64, type="int", help="Number of Misses before learned next address")
++    parser.add_option("--prefetch_num_prediction_registers", default=4, type="int", help="Number of prediction registers at each miss address")
++    parser.add_option("--prefetch_num_load", default=2, type="int", help="Number of highest probability blocks prefetched")
++    parser.add_option("--prefetch_num_missed_addrs", default=256, type="int", help="Number of missed addresses supported by prefetcher")
+ 
+ def addSEOptions(parser):
+     # Benchmark options
+diff -r 40c18bb90501 -r 556442b203df configs/common/SysPaths.py
 --- a/configs/common/SysPaths.py	Fri Mar 23 10:34:02 2018 -0700
-+++ b/configs/common/SysPaths.py	Sun Feb 24 02:41:32 2019 -0600
++++ b/configs/common/SysPaths.py	Sun Feb 24 04:44:27 2019 -0600
 @@ -32,7 +32,7 @@
  config_root = os.path.dirname(config_path)
  
@@ -18,9 +42,9 @@ diff -r 40c18bb90501 -r 13bab69f9465 configs/common/SysPaths.py
  
      def __init__(self, subdirs, sys_paths=None):
          if isinstance(subdirs, basestring):
-diff -r 40c18bb90501 -r 13bab69f9465 src/arch/arm/linux/process.cc
+diff -r 40c18bb90501 -r 556442b203df src/arch/arm/linux/process.cc
 --- a/src/arch/arm/linux/process.cc	Fri Mar 23 10:34:02 2018 -0700
-+++ b/src/arch/arm/linux/process.cc	Sun Feb 24 02:41:32 2019 -0600
++++ b/src/arch/arm/linux/process.cc	Sun Feb 24 04:44:27 2019 -0600
 @@ -69,7 +69,7 @@
  
      strcpy(name->sysname, "Linux");
@@ -30,9 +54,9 @@ diff -r 40c18bb90501 -r 13bab69f9465 src/arch/arm/linux/process.cc
      strcpy(name->version, "#1 Mon Aug 18 11:32:15 EDT 2003");
      strcpy(name->machine, "armv7l");
  
-diff -r 40c18bb90501 -r 13bab69f9465 src/mem/cache/prefetch/Prefetcher.py
+diff -r 40c18bb90501 -r 556442b203df src/mem/cache/prefetch/Prefetcher.py
 --- a/src/mem/cache/prefetch/Prefetcher.py	Fri Mar 23 10:34:02 2018 -0700
-+++ b/src/mem/cache/prefetch/Prefetcher.py	Sun Feb 24 02:41:32 2019 -0600
++++ b/src/mem/cache/prefetch/Prefetcher.py	Sun Feb 24 04:44:27 2019 -0600
 @@ -90,3 +90,13 @@
      cxx_header = "mem/cache/prefetch/tagged.hh"
  
@@ -47,18 +71,18 @@ diff -r 40c18bb90501 -r 13bab69f9465 src/mem/cache/prefetch/Prefetcher.py
 +    num_prediction_registers = Param.Int(4, "Number of prediction registers at each miss address")
 +    num_load = Param.Int(2, "Number of highest probability blocks prefetched")
 +    num_missed_addrs = Param.Int(256, "Number of missed addresses supported by prefetcher")
-diff -r 40c18bb90501 -r 13bab69f9465 src/mem/cache/prefetch/SConscript
+diff -r 40c18bb90501 -r 556442b203df src/mem/cache/prefetch/SConscript
 --- a/src/mem/cache/prefetch/SConscript	Fri Mar 23 10:34:02 2018 -0700
-+++ b/src/mem/cache/prefetch/SConscript	Sun Feb 24 02:41:32 2019 -0600
++++ b/src/mem/cache/prefetch/SConscript	Sun Feb 24 04:44:27 2019 -0600
 @@ -36,4 +36,5 @@
  Source('queued.cc')
  Source('stride.cc')
  Source('tagged.cc')
 +Source('markov.cc')
  
-diff -r 40c18bb90501 -r 13bab69f9465 src/mem/cache/prefetch/markov.cc
+diff -r 40c18bb90501 -r 556442b203df src/mem/cache/prefetch/markov.cc
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/src/mem/cache/prefetch/markov.cc	Sun Feb 24 02:41:32 2019 -0600
++++ b/src/mem/cache/prefetch/markov.cc	Sun Feb 24 04:44:27 2019 -0600
 @@ -0,0 +1,139 @@
 +/**
 + * @file
@@ -123,11 +147,11 @@ diff -r 40c18bb90501 -r 13bab69f9465 src/mem/cache/prefetch/markov.cc
 +
 +    // If it wasnt in the table clear out the predictors:
 +    if(!in_table) {
-+      for(size_t i = 0; i < table[idx].registers[i].size(); i++) {
++      for(size_t i = 0; i < table[idx].registers.size(); i++) {
 +        table[idx].registers[i].count = 0;
 +        table[idx].registers[i].address = 0;
 +      }
-+      total_count = 0;
++      table[idx].total_count = 0;
 +      table[idx].most_recently_used = 0;
 +    }
 +
@@ -166,7 +190,7 @@ diff -r 40c18bb90501 -r 13bab69f9465 src/mem/cache/prefetch/markov.cc
 +
 +    // Search if the current miss address is in one of the prediction registers
 +    for(size_t i = 0; i < table[idx].registers.size(); i++) {
-+      if(table[idx].registers[i].miss_address == blkAddr) {
++      if(table[idx].registers[i].address == blkAddr) {
 +        p_idx = i;
 +        in_table = true;
 +      }
@@ -199,9 +223,9 @@ diff -r 40c18bb90501 -r 13bab69f9465 src/mem/cache/prefetch/markov.cc
 +{
 +   return new MarkovPrefetcher(this);
 +}
-diff -r 40c18bb90501 -r 13bab69f9465 src/mem/cache/prefetch/markov.hh
+diff -r 40c18bb90501 -r 556442b203df src/mem/cache/prefetch/markov.hh
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/src/mem/cache/prefetch/markov.hh	Sun Feb 24 02:41:32 2019 -0600
++++ b/src/mem/cache/prefetch/markov.hh	Sun Feb 24 04:44:27 2019 -0600
 @@ -0,0 +1,47 @@
 +/**
 + * @file
