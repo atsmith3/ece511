@@ -1,0 +1,252 @@
+diff -r 40c18bb90501 -r 13bab69f9465 .hgtags
+--- a/.hgtags	Fri Mar 23 10:34:02 2018 -0700
++++ b/.hgtags	Sun Feb 24 02:41:32 2019 -0600
+@@ -28,3 +28,4 @@
+ bdb307e8be54a5808a9af2537e9261d88de6ed1b stable_2014_12_14
+ e1794974515011f81f8d0fda7543ba3360a12c9b stable_2015_04_15
+ 60eb3fef9c2d51cf98cdb5501ee0c4ac0efe6eae stable_2015_09_03
++40c18bb9050171d94bbb2fdbf8d46064c1590dc1 prefetch
+diff -r 40c18bb90501 -r 13bab69f9465 configs/common/SysPaths.py
+--- a/configs/common/SysPaths.py	Fri Mar 23 10:34:02 2018 -0700
++++ b/configs/common/SysPaths.py	Sun Feb 24 02:41:32 2019 -0600
+@@ -32,7 +32,7 @@
+ config_root = os.path.dirname(config_path)
+ 
+ class PathSearchFunc(object):
+-    _sys_paths = None
++    _sys_paths = ['/home/andrew/ece511/gem5/benchmarks/FSmode', '']
+ 
+     def __init__(self, subdirs, sys_paths=None):
+         if isinstance(subdirs, basestring):
+diff -r 40c18bb90501 -r 13bab69f9465 src/arch/arm/linux/process.cc
+--- a/src/arch/arm/linux/process.cc	Fri Mar 23 10:34:02 2018 -0700
++++ b/src/arch/arm/linux/process.cc	Sun Feb 24 02:41:32 2019 -0600
+@@ -69,7 +69,7 @@
+ 
+     strcpy(name->sysname, "Linux");
+     strcpy(name->nodename, "m5.eecs.umich.edu");
+-    strcpy(name->release, "3.0.0");
++    strcpy(name->release, "3.2.0");
+     strcpy(name->version, "#1 Mon Aug 18 11:32:15 EDT 2003");
+     strcpy(name->machine, "armv7l");
+ 
+diff -r 40c18bb90501 -r 13bab69f9465 src/mem/cache/prefetch/Prefetcher.py
+--- a/src/mem/cache/prefetch/Prefetcher.py	Fri Mar 23 10:34:02 2018 -0700
++++ b/src/mem/cache/prefetch/Prefetcher.py	Sun Feb 24 02:41:32 2019 -0600
+@@ -90,3 +90,13 @@
+     cxx_header = "mem/cache/prefetch/tagged.hh"
+ 
+     degree = Param.Int(2, "Number of prefetches to generate")
++
++class MarkovPrefetcher(QueuedPrefetcher):
++    type = 'MarkovPrefetcher'
++    cxx_class = 'MarkovPrefetcher'
++    cxx_header = "mem/cache/prefetch/markov.hh"
++
++    threshold = Param.Int(64, "Number of Misses before learned next address")
++    num_prediction_registers = Param.Int(4, "Number of prediction registers at each miss address")
++    num_load = Param.Int(2, "Number of highest probability blocks prefetched")
++    num_missed_addrs = Param.Int(256, "Number of missed addresses supported by prefetcher")
+diff -r 40c18bb90501 -r 13bab69f9465 src/mem/cache/prefetch/SConscript
+--- a/src/mem/cache/prefetch/SConscript	Fri Mar 23 10:34:02 2018 -0700
++++ b/src/mem/cache/prefetch/SConscript	Sun Feb 24 02:41:32 2019 -0600
+@@ -36,4 +36,5 @@
+ Source('queued.cc')
+ Source('stride.cc')
+ Source('tagged.cc')
++Source('markov.cc')
+ 
+diff -r 40c18bb90501 -r 13bab69f9465 src/mem/cache/prefetch/markov.cc
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/src/mem/cache/prefetch/markov.cc	Sun Feb 24 02:41:32 2019 -0600
+@@ -0,0 +1,139 @@
++/**
++ * @file
++ * Describes a markov prefetcher based on template policies.
++ */
++
++#include "mem/cache/prefetch/markov.hh"
++
++MarkovPrefetcher::MarkovPrefetcher(const MarkovPrefetcherParams *p)
++    : QueuedPrefetcher(p), 
++    threshold(p->threshold),
++    num_prediction_registers(p->num_prediction_registers),
++    num_load(p->num_load),
++    num_missed_addrs(p->num_missed_addrs)
++{
++  // Initialize the table:
++  table.resize(num_missed_addrs);
++  most_recently_used = 0;
++
++  // Initilaize elements of table:
++  for(size_t i = 0; i < table.size(); i++) {
++    table[i].miss_address = 0;
++    table[i].total_count = 0;
++    table[i].most_recently_used = 0;
++    table[i].registers.resize(num_prediction_registers);
++    for(size_t j = 0; j < table[i].registers.size(); j++) {
++      table[i].registers[j].address = 0;
++      table[i].registers[j].count = 0;
++    }
++  }
++
++  prev_miss = 0;
++}
++
++void
++MarkovPrefetcher::calculatePrefetch(const PacketPtr &pkt,
++        std::vector<AddrPriority> &addresses)
++{
++    Addr blkAddr = pkt->getAddr() & ~(Addr)(blkSize-1);
++
++    int idx = 0;
++    uint64_t min_val = ~(0);
++    bool in_table = false;
++
++    // Is it in the table already?
++    for(size_t i = 0; i < table.size(); i++) {
++      if(table[i].miss_address == blkAddr) {
++        idx = i;
++        in_table = true;
++      }
++    }
++
++    // Search for the next available entry:
++    for(size_t i = 0; i < table.size() && !in_table; i++) {
++      if(table[i].total_count < min_val && i != most_recently_used) {
++        idx = i;
++      }
++    }
++
++    // Update the new global MRU:
++    most_recently_used = idx;
++
++    // If it wasnt in the table clear out the predictors:
++    if(!in_table) {
++      for(size_t i = 0; i < table[idx].registers[i].size(); i++) {
++        table[idx].registers[i].count = 0;
++        table[idx].registers[i].address = 0;
++      }
++      total_count = 0;
++      table[idx].most_recently_used = 0;
++    }
++
++    // Make Prediction:
++    std::vector<int> prediction_idx;
++    prediction_idx.resize(num_load);
++    uint64_t max_val = 0;
++    // Shift as new maximums are found
++    for(int i = 0; i < table[idx].registers.size(); i++) {
++      if(table[idx].registers[i].count > max_val) {
++        max_val = table[idx].registers[i].count;
++        // Update our previous max vals;
++        for(int j = prediction_idx.size() - 1; j > 0; j--) {
++          prediction_idx[j] = prediction_idx[j-1];
++        }
++        prediction_idx[0] = i;
++      }
++    }
++
++    for(int i = 0; i < prediction_idx.size(); i++) {
++      if(table[idx].registers[prediction_idx[i]].address != 0 && table[idx].total_count > threshold) {
++        addresses.push_back(AddrPriority(table[idx].registers[prediction_idx[i]].address,0));
++      }
++    }
++
++    // Find Previous:
++    for(size_t i = 0; i < table.size(); i++) {
++      if(table[i].miss_address == prev_miss) {
++        idx = i;
++      }
++    }
++
++    in_table = false;
++    int p_idx = 0;
++    min_val = ~(0);
++
++    // Search if the current miss address is in one of the prediction registers
++    for(size_t i = 0; i < table[idx].registers.size(); i++) {
++      if(table[idx].registers[i].miss_address == blkAddr) {
++        p_idx = i;
++        in_table = true;
++      }
++    }
++
++    // If it isnt find an available register
++    for(size_t i = 0; i < table[idx].registers.size() && !in_table; i++) {
++      if(table[idx].registers[i].count < min_val && i != table[idx].most_recently_used) {
++        p_idx = i;
++      }
++    }
++    
++    table[idx].most_recently_used = p_idx;
++
++    // Update Counts:
++    if(!in_table) {
++      table[idx].total_count -= table[idx].registers[p_idx].count;
++      table[idx].registers[p_idx].count = 0;
++      table[idx].registers[p_idx].address = blkAddr;
++    }
++
++    table[idx].total_count++;
++    table[idx].registers[p_idx].count++;
++
++    return;
++}
++
++MarkovPrefetcher*
++MarkovPrefetcherParams::create()
++{
++   return new MarkovPrefetcher(this);
++}
+diff -r 40c18bb90501 -r 13bab69f9465 src/mem/cache/prefetch/markov.hh
+--- /dev/null	Thu Jan 01 00:00:00 1970 +0000
++++ b/src/mem/cache/prefetch/markov.hh	Sun Feb 24 02:41:32 2019 -0600
+@@ -0,0 +1,47 @@
++/**
++ * @file
++ * Describes a makrkov prefetcher.
++ */
++
++#ifndef __MEM_CACHE_PREFETCH_MARKOV_HH__
++#define __MEM_CACHE_PREFETCH_MARKOV_HH__
++
++#include "mem/cache/prefetch/queued.hh"
++#include "params/MarkovPrefetcher.hh"
++
++
++class MarkovPrefetcher : public QueuedPrefetcher
++{
++  private:
++    typedef struct {
++      Addr address;
++      uint64_t count;
++    } predReg;
++
++    typedef struct {
++      Addr miss_address;
++      int most_recently_used;
++      std::vector<predReg> registers;
++      uint64_t total_count;
++    } markovTableEntry;
++
++  protected:
++    int threshold;
++    int num_prediction_registers;
++    int num_load;
++    int num_missed_addrs;
++
++  public:
++    std::vector<markovTableEntry> table;
++    int most_recently_used;
++    Addr prev_miss; // Used for training;
++
++    MarkovPrefetcher(const MarkovPrefetcherParams *p);
++
++    ~MarkovPrefetcher() {}
++
++    void calculatePrefetch(const PacketPtr &pkt,
++                           std::vector<AddrPriority> &addresses);
++};
++
++#endif // __MEM_CACHE_PREFETCH_MARKOV_HH__
