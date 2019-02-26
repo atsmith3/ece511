@@ -1,19 +1,76 @@
-diff -r 40c18bb90501 -r 556442b203df .hgtags
+diff -r 40c18bb90501 -r 4c24a1d04cd9 .hgtags
 --- a/.hgtags	Fri Mar 23 10:34:02 2018 -0700
-+++ b/.hgtags	Sun Feb 24 04:44:27 2019 -0600
++++ b/.hgtags	Tue Feb 26 00:41:43 2019 -0600
 @@ -28,3 +28,4 @@
  bdb307e8be54a5808a9af2537e9261d88de6ed1b stable_2014_12_14
  e1794974515011f81f8d0fda7543ba3360a12c9b stable_2015_04_15
  60eb3fef9c2d51cf98cdb5501ee0c4ac0efe6eae stable_2015_09_03
 +40c18bb9050171d94bbb2fdbf8d46064c1590dc1 prefetch
-diff -r 40c18bb90501 -r 556442b203df configs/common/Options.py
+diff -r 40c18bb90501 -r 4c24a1d04cd9 configs/common/CacheConfig.py
+--- a/configs/common/CacheConfig.py	Fri Mar 23 10:34:02 2018 -0700
++++ b/configs/common/CacheConfig.py	Tue Feb 26 00:41:43 2019 -0600
+@@ -94,6 +94,26 @@
+         system.l2.cpu_side = system.tol2bus.master
+         system.l2.mem_side = system.membus.slave
+ 
++        system.l2.prefetch_on_access = True
++
++        if options.prefetch_type == "Markov":
++          system.l2.prefetcher = MarkovPrefetcher()
++          system.l2.prefetcher.threshold = options.prefetch_threshold
++          system.l2.prefetcher.num_prediction_registers = options.prefetch_num_prediction_registers
++          system.l2.prefetcher.num_load = options.prefetch_num_load
++          system.l2.prefetcher.num_missed_addrs = options.prefetch_num_missed_addrs
++          system.l2.prefetcher.queue_size = options.prefetch_queue_size
++        if options.prefetch_type == "Stride":
++          system.l2.prefetcher = StridePrefetcher()
++          system.l2.prefetcher.thresh_conf = options.prefetch_thresh_conf
++          system.l2.prefetcher.table_sets = options.prefetch_table_sets
++          system.l2.prefetcher.table_assoc = options.prefetch_table_assoc
++          system.l2.prefetcher.queue_size = options.prefetch_queue_size
++        if options.prefetch_type == "Tagged":
++          system.l2.prefetcher = TaggedPrefetcher()
++          system.l2.prefetcher.degree = options.prefetch_degree
++          system.l2.prefetcher.queue_size = options.prefetch_queue_size
++
+     if options.memchecker:
+         system.memchecker = MemChecker()
+ 
+diff -r 40c18bb90501 -r 4c24a1d04cd9 configs/common/FSConfig.py
+--- a/configs/common/FSConfig.py	Fri Mar 23 10:34:02 2018 -0700
++++ b/configs/common/FSConfig.py	Tue Feb 26 00:41:43 2019 -0600
+@@ -558,10 +558,10 @@
+ 
+     # Disks
+     disk0 = CowIdeDisk(driveID='master')
+-    disk2 = CowIdeDisk(driveID='master')
++    # disk2 = CowIdeDisk(driveID='master')
+     disk0.childImage(mdesc.disk())
+-    disk2.childImage(disk('linux-bigswap2.img'))
+-    self.pc.south_bridge.ide.disks = [disk0, disk2]
++    # disk2.childImage(disk('linux-bigswap2.img'))
++    self.pc.south_bridge.ide.disks = [disk0]
+ 
+     # Add in a Bios information structure.
+     structures = [X86SMBiosBiosInformation()]
+@@ -678,7 +678,7 @@
+     if not cmdline:
+         cmdline = 'earlyprintk=ttyS0 console=ttyS0 lpj=7999923 root=/dev/hda1'
+     self.boot_osflags = fillInCmdline(mdesc, cmdline)
+-    self.kernel = binary('x86_64-vmlinux-2.6.22.9')
++    # self.kernel = binary('x86_64-vmlinux-2.6.22.9')
+     return self
+ 
+ 
+diff -r 40c18bb90501 -r 4c24a1d04cd9 configs/common/Options.py
 --- a/configs/common/Options.py	Fri Mar 23 10:34:02 2018 -0700
-+++ b/configs/common/Options.py	Sun Feb 24 04:44:27 2019 -0600
-@@ -292,6 +292,20 @@
++++ b/configs/common/Options.py	Tue Feb 26 00:41:43 2019 -0600
+@@ -292,6 +292,21 @@
                        choices=["arm", "thumb", "aarch64"],
                        help="ARM instruction set.")
  
 +    # Options for Prefetchers:
++    parser.add_option("--prefetch_type", default="None", action="store", type="string", help="Markov, Stride, Tagged")
 +    # Queued Prefetcher Options
 +    parser.add_option("--prefetch_queue_size", default=32, type="int", help="Maximum number of queued prefetches")
 +    # Stride Prefetcher Options
@@ -30,9 +87,25 @@ diff -r 40c18bb90501 -r 556442b203df configs/common/Options.py
  
  def addSEOptions(parser):
      # Benchmark options
-diff -r 40c18bb90501 -r 556442b203df configs/common/SysPaths.py
+diff -r 40c18bb90501 -r 4c24a1d04cd9 configs/common/Simulation.py
+--- a/configs/common/Simulation.py	Fri Mar 23 10:34:02 2018 -0700
++++ b/configs/common/Simulation.py	Tue Feb 26 00:41:43 2019 -0600
+@@ -522,10 +522,8 @@
+                                       for i in xrange(np)]
+ 
+     if options.standard_switch:
+-        switch_cpus = [TimingSimpleCPU(switched_out=True, cpu_id=(i))
+-                       for i in xrange(np)]
+-        switch_cpus_1 = [DerivO3CPU(switched_out=True, cpu_id=(i))
+-                        for i in xrange(np)]
++        switch_cpus = [AtomicSimpleCPU(switched_out=True, cpu_id=(i)) for i in xrange(np)]
++        switch_cpus_1 = [TimingSimpleCPU(switched_out=True, cpu_id=(i)) for i in xrange(np)]
+ 
+         for i in xrange(np):
+             switch_cpus[i].system =  testsys
+diff -r 40c18bb90501 -r 4c24a1d04cd9 configs/common/SysPaths.py
 --- a/configs/common/SysPaths.py	Fri Mar 23 10:34:02 2018 -0700
-+++ b/configs/common/SysPaths.py	Sun Feb 24 04:44:27 2019 -0600
++++ b/configs/common/SysPaths.py	Tue Feb 26 00:41:43 2019 -0600
 @@ -32,7 +32,7 @@
  config_root = os.path.dirname(config_path)
  
@@ -42,9 +115,9 @@ diff -r 40c18bb90501 -r 556442b203df configs/common/SysPaths.py
  
      def __init__(self, subdirs, sys_paths=None):
          if isinstance(subdirs, basestring):
-diff -r 40c18bb90501 -r 556442b203df src/arch/arm/linux/process.cc
+diff -r 40c18bb90501 -r 4c24a1d04cd9 src/arch/arm/linux/process.cc
 --- a/src/arch/arm/linux/process.cc	Fri Mar 23 10:34:02 2018 -0700
-+++ b/src/arch/arm/linux/process.cc	Sun Feb 24 04:44:27 2019 -0600
++++ b/src/arch/arm/linux/process.cc	Tue Feb 26 00:41:43 2019 -0600
 @@ -69,7 +69,7 @@
  
      strcpy(name->sysname, "Linux");
@@ -54,9 +127,9 @@ diff -r 40c18bb90501 -r 556442b203df src/arch/arm/linux/process.cc
      strcpy(name->version, "#1 Mon Aug 18 11:32:15 EDT 2003");
      strcpy(name->machine, "armv7l");
  
-diff -r 40c18bb90501 -r 556442b203df src/mem/cache/prefetch/Prefetcher.py
+diff -r 40c18bb90501 -r 4c24a1d04cd9 src/mem/cache/prefetch/Prefetcher.py
 --- a/src/mem/cache/prefetch/Prefetcher.py	Fri Mar 23 10:34:02 2018 -0700
-+++ b/src/mem/cache/prefetch/Prefetcher.py	Sun Feb 24 04:44:27 2019 -0600
++++ b/src/mem/cache/prefetch/Prefetcher.py	Tue Feb 26 00:41:43 2019 -0600
 @@ -90,3 +90,13 @@
      cxx_header = "mem/cache/prefetch/tagged.hh"
  
@@ -71,19 +144,19 @@ diff -r 40c18bb90501 -r 556442b203df src/mem/cache/prefetch/Prefetcher.py
 +    num_prediction_registers = Param.Int(4, "Number of prediction registers at each miss address")
 +    num_load = Param.Int(2, "Number of highest probability blocks prefetched")
 +    num_missed_addrs = Param.Int(256, "Number of missed addresses supported by prefetcher")
-diff -r 40c18bb90501 -r 556442b203df src/mem/cache/prefetch/SConscript
+diff -r 40c18bb90501 -r 4c24a1d04cd9 src/mem/cache/prefetch/SConscript
 --- a/src/mem/cache/prefetch/SConscript	Fri Mar 23 10:34:02 2018 -0700
-+++ b/src/mem/cache/prefetch/SConscript	Sun Feb 24 04:44:27 2019 -0600
++++ b/src/mem/cache/prefetch/SConscript	Tue Feb 26 00:41:43 2019 -0600
 @@ -36,4 +36,5 @@
  Source('queued.cc')
  Source('stride.cc')
  Source('tagged.cc')
 +Source('markov.cc')
  
-diff -r 40c18bb90501 -r 556442b203df src/mem/cache/prefetch/markov.cc
+diff -r 40c18bb90501 -r 4c24a1d04cd9 src/mem/cache/prefetch/markov.cc
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/src/mem/cache/prefetch/markov.cc	Sun Feb 24 04:44:27 2019 -0600
-@@ -0,0 +1,139 @@
++++ b/src/mem/cache/prefetch/markov.cc	Tue Feb 26 00:41:43 2019 -0600
+@@ -0,0 +1,142 @@
 +/**
 + * @file
 + * Describes a markov prefetcher based on template policies.
@@ -153,6 +226,7 @@ diff -r 40c18bb90501 -r 556442b203df src/mem/cache/prefetch/markov.cc
 +      }
 +      table[idx].total_count = 0;
 +      table[idx].most_recently_used = 0;
++      table[idx].miss_address = blkAddr;
 +    }
 +
 +    // Make Prediction:
@@ -215,6 +289,8 @@ diff -r 40c18bb90501 -r 556442b203df src/mem/cache/prefetch/markov.cc
 +    table[idx].total_count++;
 +    table[idx].registers[p_idx].count++;
 +
++    prev_miss = blkAddr;
++
 +    return;
 +}
 +
@@ -223,9 +299,9 @@ diff -r 40c18bb90501 -r 556442b203df src/mem/cache/prefetch/markov.cc
 +{
 +   return new MarkovPrefetcher(this);
 +}
-diff -r 40c18bb90501 -r 556442b203df src/mem/cache/prefetch/markov.hh
+diff -r 40c18bb90501 -r 4c24a1d04cd9 src/mem/cache/prefetch/markov.hh
 --- /dev/null	Thu Jan 01 00:00:00 1970 +0000
-+++ b/src/mem/cache/prefetch/markov.hh	Sun Feb 24 04:44:27 2019 -0600
++++ b/src/mem/cache/prefetch/markov.hh	Tue Feb 26 00:41:43 2019 -0600
 @@ -0,0 +1,47 @@
 +/**
 + * @file
