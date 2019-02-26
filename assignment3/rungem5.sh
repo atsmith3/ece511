@@ -146,21 +146,23 @@ case "$1" in
 			diskImage="${DIR}/disks/x86root-parsec.img"
 			kernelImage="${DIR}/binaries/vmlinux"
       
-      PREFETCH=('' 'Markov' 'Stride' 'Tagged')
+#      PREFETCH=('' 'Markov' 'Stride' 'Tagged')
+      PREFETCH=('' 'Markov')
       PREFETCH_OPTS=('' 
-                     '--prefetch_type="Markov" --prefetch_threshold=32 --prefetch_num_prediction_registers=4 --prefetch_num_load=2 --prefetch_num_missed_addrs=128'
-                     '--prefetch_type="Stride"' 
-                     '--prefetch_type="Tagged"')
+                     '--prefetch_type=Markov --prefetch_threshold=32 --prefetch_num_prediction_registers=4 --prefetch_num_load=2 --prefetch_num_missed_addrs=128'
+                     '--prefetch_type=Stride' 
+                     '--prefetch_type=Tagged')
 
       for idx in ${!PREFETCH[*]}
         do
-      		time build/X86/gem5.opt\
+      		build/X86/gem5.opt\
       			--outdir=${outputDir}_${PREFETCH[$idx]} --remote-gdb-port=0 configs/example/fs.py\
   	    		--kernel=${kernelImage} --num-cpus=8 --caches --l2cache\
             ${PREFETCH_OPTS[$idx]}\
-  	    		--disk-image=${diskImage} --script=${script} --standard-switch 4998864102000\
+  	    		--disk-image=${diskImage} --script=${script} --standard-switch 4000000000000\
   	    		-I 1000000000 &
       done
+# 4998864102000
 #			time build/X86/gem5.opt\
 #				--outdir=${outputDir} --remote-gdb-port=0 configs/example/fs.py\
 #				--kernel=${kernelImage} --ruby --num-cpus=8 --caches --l2cache\
