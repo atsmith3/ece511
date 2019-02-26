@@ -1,6 +1,21 @@
 #!/bin/bash
 
+# 4800197583000
+
 case "$1" in
+	"calibrate")
+		date=$(date +%d%b%Y.%H%M)
+		debugFlags=RubySlicc
+		outputDir="./output_logs/calibrate"
+		outName="m5out_${bname}"
+		DIR="$( cd "$( dirname "$0" )" && pwd )"
+		diskImage="${DIR}/disks/x86root-parsec.img"
+		kernelImage="${DIR}/binaries/vmlinux"
+		build/X86/gem5.opt\
+			--outdir=${outputDir} --remote-gdb-port=0 configs/example/fs.py\
+			--kernel=${kernelImage} --num-cpus=8 --caches --l2cache\
+			--disk-image=${diskImage} --script=calibrate.rcS 
+		;;
 	"tagged")
 		date=$(date +%d%b%Y.%H%M)
 		debugFlags=RubySlicc
@@ -147,10 +162,12 @@ case "$1" in
 			kernelImage="${DIR}/binaries/vmlinux"
       
 #      PREFETCH=('' 'Markov' 'Stride' 'Tagged')
-      PREFETCH=('' 'Markov')
-      PREFETCH_OPTS=('' 
-                     '--prefetch_type=Markov --prefetch_threshold=32 --prefetch_num_prediction_registers=4 --prefetch_num_load=2 --prefetch_num_missed_addrs=128'
-                     '--prefetch_type=Stride' 
+      PREFETCH=('Stride' 'Tagged')
+#      PREFETCH_OPTS=('' 
+#                     '--prefetch_type=Markov --prefetch_threshold=32 --prefetch_num_prediction_registers=4 --prefetch_num_load=2 --prefetch_num_missed_addrs=128'
+#                     '--prefetch_type=Stride' 
+#                     '--prefetch_type=Tagged')
+      PREFETCH_OPTS=('--prefetch_type=Stride' 
                      '--prefetch_type=Tagged')
 
       for idx in ${!PREFETCH[*]}
