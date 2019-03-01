@@ -1,0 +1,104 @@
+Linux version 3.4.112 (abulila2@abulila2-OptiPlex-9020) (gcc version 5.5.0 20171010 (Ubuntu 5.5.0-12ubuntu1~16.04) ) #3 SMP Sun Feb 17 10:36:02 CST 2019
+Command line: earlyprintk=ttyS0 console=ttyS0 lpj=7999923 root=/dev/hda1
+CPU: vendor_id 'M5 Simulator' unknown, using generic init.
+CPU: Your system may be unstable.
+BIOS-provided physical RAM map:
+ BIOS-e820: 0000000000000000 - 000000000009fc00 (usable)
+ BIOS-e820: 000000000009fc00 - 0000000000100000 (reserved)
+ BIOS-e820: 0000000000100000 - 0000000020000000 (usable)
+ BIOS-e820: 0000000020000000 - 00000000c0000000 (reserved)
+ BIOS-e820: 00000000ffff0000 - 0000000100000000 (reserved)
+bootconsole [earlyser0] enabled
+NX (Execute Disable) protection: active
+SMBIOS 2.5 present.
+No AGP bridge found
+last_pfn = 0x20000 max_arch_pfn = 0x400000000
+x86 PAT enabled: cpu 0, old 0x7040600070406, new 0x7010600070106
+CPU MTRRs all blank - virtualized system.
+found SMP MP-table at [ffff8800000f0050] f0050
+init_memory_mapping: 0000000000000000-0000000020000000
+Zone PFN ranges:
+  DMA      0x00000010 -> 0x00001000
+  DMA32    0x00001000 -> 0x00100000
+  Normal   empty
+Movable zone start PFN for each node
+Early memory PFN ranges
+    0: 0x00000010 -> 0x0000009f
+    0: 0x00000100 -> 0x00020000
+Intel MultiProcessor Specification v1.4
+MPTABLE: OEM ID: 
+MPTABLE: Product ID: 
+MPTABLE: APIC at: 0xFEE00000
+Processor #0 (Bootup-CPU)
+Processor #1
+Processor #2
+Processor #3
+Processor #4
+Processor #5
+Processor #6
+Processor #7
+IOAPIC[0]: apic_id 8, version 20, address 0xfec00000, GSI 0-23
+Processors: 8
+SMP: Allowing 8 CPUs, 0 hotplug CPUs
+Allocating PCI resources starting at c0000000 (gap: c0000000:3fff0000)
+setup_percpu: NR_CPUS:8 nr_cpumask_bits:8 nr_cpu_ids:8 nr_node_ids:1
+PERCPU: Embedded 25 pages/cpu @ffff88001fc00000 s71488 r8192 d22720 u262144
+Built 1 zonelists in Zone order, mobility grouping on.  Total pages: 129165
+Kernel command line: earlyprintk=ttyS0 console=ttyS0 lpj=7999923 root=/dev/hda1
+PID hash table entries: 2048 (order: 2, 16384 bytes)
+Dentry cache hash table entries: 65536 (order: 7, 524288 bytes)
+Inode-cache hash table entries: 32768 (order: 6, 262144 bytes)
+Checking aperture...
+No AGP bridge found
+Memory: 505920k/524288k available (4538k kernel code, 452k absent, 17916k reserved, 2379k data, 416k init)
+Hierarchical RCU implementation.
+NR_IRQS:4352 nr_irqs:744 16
+Console: colour dummy device 80x25
+console [ttyS0] enabled, bootconsole disabled
+console [ttyS0] enabled, bootconsole disabled
+Fast TSC calibration using PIT
+Detected 2000.085 MHz processor.
+Marking TSC unstable due to TSCs unsynchronized
+Calibrating delay loop (skipped) preset value.. 3999.96 BogoMIPS (lpj=7999923)
+pid_max: default: 32768 minimum: 301
+Mount-cache hash table entries: 256
+CPU: CPU feature xsave disabled, no CPUID level 0xd
+mce: CPU supports 4 MCE banks
+MCE: unknown CPU type - not enabling MCE support.
+using mwait in idle threads.
+..TIMER: vector=0x30 apic1=0 pin1=2 apic2=0 pin2=0
+CPU0: M5 Simulator Fake M5 x86_64 CPU stepping 01
+Performance Events: 
+Booting Node   0, Processors  #1
+CPU: CPU feature xsave disabled, no CPUID level 0xd
+ #2
+CPU: CPU feature xsave disabled, no CPUID level 0xd
+ #3
+CPU: CPU feature xsave disabled, no CPUID level 0xd
+ #4
+CPU: CPU feature xsave disabled, no CPUID level 0xd
+ #5
+CPU: CPU feature xsave disabled, no CPUID level 0xd
+ #6
+CPU: CPU feature xsave disabled, no CPUID level 0xd
+ #7 Ok.
+CPU: CPU feature xsave disabled, no CPUID level 0xd
+Brought up 8 CPUs
+Total of 8 processors activated (31999.69 BogoMIPS).
+devtmpfs: initialized
+NET: Registered protocol family 16
+PCI: Using configuration type 1 for base access
+bio: create slab <bio-0> at 0
+vgaarb: loaded
+SCSI subsystem initialized
+usbcore: registered new interface driver usbfs
+usbcore: registered new interface driver hub
+usbcore: registered new device driver usb
+PCI: Probing PCI hardware
+PCI host bridge to bus 0000:00
+pci_bus 0000:00: root bus resource [io  0x0000-0xffff]
+pci_bus 0000:00: root bus resource [mem 0x00000000-0xffffffffffff]
+pci 0000:00:04.0: BAR 6: assigned [mem 0xc0000000-0xc00007ff pref]
+pci 0000:00:04.0: BAR 4: assigned [io  0x1000-0x100f]
+NET: Registered protocol family 2
+IP route cache hash table entries: 4096 (order: 3, 32768 bytes)
